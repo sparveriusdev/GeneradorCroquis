@@ -3,6 +3,8 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.2.0 | 2026-11-05 | ResumenCapa.filas() reemplaza a como_texto(): la
+#          |            | vista presenta el resumen como tabla.
 #   v1.1.0 | 2026-11-05 | Añade InfoRelease, Descarga y ResultadoActualizacion
 #          |            | para la comprobación de nuevas versiones.
 #   v1.0.0 | 2026-11-05 | Creación. Modelo de datos explícito (Cota,
@@ -113,21 +115,25 @@ class ResumenCapa:
     campo_id_sugerido: str | None
     campo_pisos_sugerido: str | None
 
-    def como_texto(self) -> str:
+    @property
+    def num_construcciones(self) -> int:
+        return self.capa.contar_construcciones(self.campo_id_sugerido)
+
+    def filas(self) -> list[tuple[str, str]]:
+        """Datos principales de la capa como pares (etiqueta, valor)."""
         capa = self.capa
-        lineas = [
-            f"Archivo: {capa.nombre}",
-            f"Total de polígonos: {capa.num_poligonos}",
-            f"CRS: {capa.gdf.crs}",
-            f"Columnas: {', '.join(capa.campos)}",
-            *capa.avisos,
-        ]
         if self.campo_id_sugerido:
-            n = capa.contar_construcciones(self.campo_id_sugerido)
-            lineas.append(f"Construcciones únicas (por '{self.campo_id_sugerido}'): {n}")
+            construcciones = f"{self.num_construcciones} (agrupadas por «{self.campo_id_sugerido}»)"
         else:
-            lineas.append(f"Construcciones: {capa.num_poligonos} (sin agrupar)")
-        return "\n".join(lineas)
+            construcciones = f"{capa.num_poligonos} (un croquis por polígono)"
+        crs = capa.gdf.crs
+        return [
+            ("Archivo", capa.nombre),
+            ("Polígonos", str(capa.num_poligonos)),
+            ("Construcciones", construcciones),
+            ("Sistema de coordenadas", crs.to_string() if crs is not None else "Sin definir"),
+            ("Columnas", ", ".join(capa.campos) or "—"),
+        ]
 
 
 @dataclass(frozen=True)

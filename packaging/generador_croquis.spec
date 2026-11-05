@@ -4,6 +4,9 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.1.0 | 2026-11-05 | Icono de la aplicación (.ico en Windows, .png en
+#          |            | macOS/Linux), fuentes Roboto, logo y docs/ (manual
+#          |            | sin conexión) incluidos. Se excluye el logo.jpeg.
 #   v1.0.0 | 2026-11-05 | Creación. Especificación PyInstaller multiplataforma:
 #          |            | Windows -> .exe de un solo archivo; Linux -> binario
 #          |            | de un solo archivo; macOS -> bundle .app. Incluye
@@ -29,7 +32,14 @@ for paquete in ("pyogrio", "pyproj", "shapely", "geopandas"):
     datas += d
     binaries += b
     hiddenimports += h
-hiddenimports += ["matplotlib.backends.backend_tkagg"]
+hiddenimports += ["matplotlib.backends.backend_tkagg", "PIL._tkinter_finder"]
+
+ASSETS = SRC / "generador_croquis" / "assets"
+datas += [(str(f), "generador_croquis/assets/fonts") for f in (ASSETS / "fonts").iterdir()]
+datas += [(str(ASSETS / n), "generador_croquis/assets") for n in ("logo.png", "icono.ico")]
+datas += [(str(RAIZ / "docs" / "MANUAL_DE_USO.md"), "docs")]
+datas += [(str(f), "docs/img") for f in (RAIZ / "docs" / "img").glob("*.png")]
+ICONO = str(ASSETS / ("icono.ico" if sys.platform == "win32" else "logo.png"))
 
 a = Analysis(
     [str(SRC / "generador_croquis" / "__main__.py")],
@@ -45,12 +55,13 @@ pyz = PYZ(a.pure)
 if sys.platform == "darwin":
     # En macOS se genera un .app (modo carpeta, recomendado por PyInstaller).
     exe = EXE(pyz, a.scripts, [], exclude_binaries=True, name=NOMBRE,
-              console=False, upx=False)
+              console=False, upx=False, icon=ICONO)
     coll = COLLECT(exe, a.binaries, a.datas, name=NOMBRE, upx=False)
     app = BUNDLE(
         coll,
         name=f"{NOMBRE}.app",
         bundle_identifier="co.edu.utp.generadorcroquis",
+        icon=ICONO,
         version=VERSION,
         info_plist={"NSHighResolutionCapable": True, "CFBundleShortVersionString": VERSION},
     )
@@ -62,4 +73,5 @@ else:
         console=False,  # sin ventana de consola; los errores van al log y a un diálogo
         upx=False,
         runtime_tmpdir=None,
+        icon=ICONO,
     )

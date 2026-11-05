@@ -3,6 +3,8 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.1.0 | 2026-11-05 | mostrar_info -> mostrar_estado (barra de estado) y
+#          |            | nuevo mostrar_resumen (tabla de datos de la capa).
 #   v1.0.0 | 2026-11-05 | Creación. Contrato que debe cumplir cualquier vista
 #          |            | (inversión de dependencias: el controlador no conoce
 #          |            | Tkinter y puede probarse con una vista falsa).
@@ -21,7 +23,9 @@ if TYPE_CHECKING:
 class VistaCroquis(Protocol):
     """Operaciones que el controlador necesita de la interfaz de usuario."""
 
-    def mostrar_info(self, texto: str) -> None: ...
+    def mostrar_estado(self, texto: str) -> None: ...
+
+    def mostrar_resumen(self, filas: Sequence[tuple[str, str]], avisos: Sequence[str]) -> None: ...
 
     def mostrar_error(self, titulo: str, mensaje: str) -> None: ...
 

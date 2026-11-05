@@ -3,6 +3,7 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.1.0 | 2026-11-05 | Adapta la vista falsa a mostrar_estado/mostrar_resumen.
 #   v1.0.0 | 2026-11-05 | Creación. Pruebas del controlador con una vista
 #          |            | falsa (demuestra el desacople MVC).
 # ==============================================================================
@@ -23,13 +24,17 @@ from generador_croquis.services import ServicioCroquis
 class VistaFalsa:
     respuesta_confirmar: bool = True
     eventos: list[tuple] = field(default_factory=list)
-    info: str = ""
+    estado: str = ""
+    resumen: list = field(default_factory=list)
     generar_habilitado: bool = False
     guardar_habilitado: bool = False
     figuras: list = field(default_factory=list)
 
-    def mostrar_info(self, texto):
-        self.info = texto
+    def mostrar_estado(self, texto):
+        self.estado = texto
+
+    def mostrar_resumen(self, filas, avisos):
+        self.resumen = list(filas)
 
     def mostrar_error(self, titulo, mensaje):
         self.eventos.append(("error", mensaje))
@@ -79,14 +84,16 @@ def crear_controlador(vista, **config):
 def test_flujo_completo(vista, shapefile, tmp_path):
     ctrl = crear_controlador(vista)
     ctrl.cargar_archivo(shapefile)
-    assert ("campos", "codigo", "num_pisos", "Detectado (2 construcciones)") in vista.eventos
+    assert ("campos", "codigo", "num_pisos", "Detectado automáticamente") in vista.eventos
     assert vista.generar_habilitado
-    assert "Total de polígonos: 3" in vista.info
+    assert ("Polígonos", "3") in vista.resumen
+    assert ("Construcciones", "2 (agrupadas por «codigo»)") in vista.resumen
+    assert vista.estado.startswith("Archivo listo: 3 polígonos")
 
     ctrl.generar("codigo", "num_pisos")
     assert len(vista.figuras) == 1
     assert vista.guardar_habilitado
-    assert vista.info.endswith("Croquis generados exitosamente.")
+    assert vista.estado.startswith("Listo: 2 croquis generados")
 
     destino = tmp_path / "salida.pdf"
     ctrl.guardar(destino)
@@ -102,11 +109,12 @@ def test_error_de_carga_deshabilita_generar(vista, tmp_path):
     assert vista.eventos[-1][0] == "error"
     assert not vista.generar_habilitado
     assert ctrl.estado.capa is None
+    assert vista.resumen == []
 
 
 def test_generar_sin_capa_avisa(vista):
     crear_controlador(vista).generar(None, None)
-    assert vista.eventos == [("aviso", "Primero seleccione un archivo.")]
+    assert vista.eventos == [("aviso", "Primero abra un archivo de datos.")]
 
 
 def test_confirmacion_de_muchas_construcciones(vista, shapefile):

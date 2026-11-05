@@ -3,6 +3,9 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.1.0 | 2026-11-05 | Estilo Material: diálogo de selección con título,
+#          |            | texto de apoyo, lista con contorno y acciones a la
+#          |            | derecha.
 #   v1.0.0 | 2026-11-05 | Creación. Diálogo de selección (antes
 #          |            | seleccionar_de_lista) y ventana de vista previa
 #          |            | de la figura embebida en Tk (reemplaza plt.show).
@@ -20,46 +23,74 @@ from tkinter import ttk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
 
-from generador_croquis.view.estilos import FUENTE, FUENTE_MONO, centrar
+from generador_croquis.view.estilos import TemaMaterial, centrar
 
 
 class DialogoSeleccion:
-    """Diálogo modal para elegir un elemento de una lista."""
+    """Diálogo modal Material para elegir un elemento de una lista."""
 
-    def __init__(self, parent: tk.Misc, titulo: str, mensaje: str, opciones: Sequence[str]):
+    def __init__(
+        self,
+        parent: tk.Misc,
+        tema: TemaMaterial,
+        titulo: str,
+        mensaje: str,
+        opciones: Sequence[str],
+    ):
+        c, t = tema.c, tema.t
         self._opciones = list(opciones)
         self.resultado: str | None = None
 
-        self._dlg = tk.Toplevel(parent)
+        self._dlg = tk.Toplevel(parent, background=c.surface)
         self._dlg.title(titulo)
-        self._dlg.resizable(False, False)
         self._dlg.transient(parent.winfo_toplevel())
-        centrar(self._dlg, 520, 330, relativo_a=parent)
+        self._dlg.minsize(420, 320)
+        centrar(self._dlg, 560, 420, relativo_a=parent)
 
-        ttk.Label(self._dlg, text=mensaje, font=(FUENTE, 10)).pack(pady=10)
+        marco = ttk.Frame(self._dlg, padding=24)
+        marco.pack(fill=tk.BOTH, expand=True)
+        marco.columnconfigure(0, weight=1)
+        marco.rowconfigure(2, weight=1)
+        ttk.Label(marco, text=titulo, style="Headline.TLabel").grid(row=0, column=0, sticky="w")
+        ttk.Label(marco, text=mensaje, style="Body.TLabel", wraplength=500, justify="left").grid(
+            row=1, column=0, sticky="w", pady=(6, 14)
+        )
 
-        marco = ttk.Frame(self._dlg)
-        marco.pack(fill=tk.BOTH, expand=True, padx=15, pady=5)
-        barra = ttk.Scrollbar(marco)
-        barra.pack(side=tk.RIGHT, fill=tk.Y)
+        lista_marco = tk.Frame(marco, background=c.outline_variant, padx=1, pady=1)
+        lista_marco.grid(row=2, column=0, sticky="nsew")
         self._lista = tk.Listbox(
-            marco,
-            font=(FUENTE_MONO, 9),
-            yscrollcommand=barra.set,
+            lista_marco,
+            font=t.body_medium,
             selectmode=tk.SINGLE,
             exportselection=False,
+            activestyle="none",
+            relief="flat",
+            borderwidth=0,
+            highlightthickness=0,
+            background=c.surface_container_lowest,
+            foreground=c.on_surface,
+            selectbackground=c.primary_container,
+            selectforeground=c.on_primary_container,
         )
-        self._lista.pack(fill=tk.BOTH, expand=True)
-        barra.config(command=self._lista.yview)
+        barra = ttk.Scrollbar(
+            lista_marco, command=self._lista.yview, style="Material.Vertical.TScrollbar"
+        )
+        self._lista.configure(yscrollcommand=barra.set)
+        barra.pack(side=tk.RIGHT, fill=tk.Y)
+        self._lista.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(8, 0), pady=6)
         for opcion in self._opciones:
-            self._lista.insert(tk.END, opcion)
+            self._lista.insert(tk.END, f"  {opcion}")
         self._lista.select_set(0)
         self._lista.focus_set()
 
-        botones = ttk.Frame(self._dlg)
-        botones.pack(pady=10)
-        ttk.Button(botones, text="Seleccionar", command=self._aceptar).pack(side=tk.LEFT, padx=5)
-        ttk.Button(botones, text="Cancelar", command=self._dlg.destroy).pack(side=tk.LEFT, padx=5)
+        botones = ttk.Frame(marco)
+        botones.grid(row=3, column=0, sticky="e", pady=(18, 0))
+        ttk.Button(botones, text="Cancelar", style="Text.TButton", command=self._dlg.destroy).pack(
+            side=tk.LEFT, padx=(0, 8)
+        )
+        ttk.Button(botones, text="Seleccionar", style="Filled.TButton", command=self._aceptar).pack(
+            side=tk.LEFT
+        )
 
         self._lista.bind("<Double-Button-1>", lambda _e: self._aceptar())
         self._dlg.bind("<Return>", lambda _e: self._aceptar())

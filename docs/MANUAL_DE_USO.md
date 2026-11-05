@@ -4,6 +4,9 @@ Archivo  : docs/MANUAL_DE_USO.md
 Proyecto : Generador de Croquis
 ------------------------------------------------------------------------------
 CHANGELOG (versión interna del documento)
+  v1.1.0 | 2026-11-05 | Actualizado a la interfaz 1.0.2 (Material Design):
+         |            | nuevos nombres de botones, tarjetas, resumen,
+         |            | barra de estado, pestaña Ayuda y capturas nuevas.
   v1.0.0 | 2026-11-05 | Creación. Manual de usuario para la versión 1.0.1 de
          |            | la aplicación: instalación, preparación de datos,
          |            | generación y exportación de croquis, actualizaciones
@@ -12,7 +15,7 @@ CHANGELOG (versión interna del documento)
 -->
 # Manual de uso — Generador de Croquis
 
-> Corresponde a la versión **1.0.1** de la aplicación.
+> Corresponde a la versión **1.0.2** de la aplicación.
 
 ## Contenido
 
@@ -87,9 +90,9 @@ El valor debe coincidir con el que aparece en `SHA256SUMS.txt`.
 
 | Formato | Cómo abrirlo | Notas |
 |---|---|---|
-| Shapefile (`.shp`) | **Buscar archivo...** | Deben estar en la misma carpeta, como mínimo, `.shp`, `.shx` y `.dbf`; conviene incluir también `.prj`. |
-| Archivo `.zip` | **Buscar archivo...** | Puede contener shapefiles y/o carpetas `.gdb`, en cualquier subcarpeta. Si hay varios, el programa pregunta cuál usar. |
-| File Geodatabase (`.gdb`) | **Abrir GDB...** | Seleccione la **carpeta** `.gdb`. Si tiene varias capas, el programa pregunta cuál usar. |
+| Shapefile (`.shp`) | **Abrir archivo…** | Deben estar en la misma carpeta, como mínimo, `.shp`, `.shx` y `.dbf`; conviene incluir también `.prj`. |
+| Archivo `.zip` | **Abrir archivo…** | Puede contener shapefiles y/o carpetas `.gdb`, en cualquier subcarpeta. Si hay varios, el programa pregunta cuál usar. |
+| File Geodatabase (`.gdb`) | **Abrir carpeta GDB…** | Seleccione la **carpeta** `.gdb`. Si tiene varias capas, el programa pregunta cuál usar. |
 
 ### Requisitos de la capa
 
@@ -99,8 +102,8 @@ El valor debe coincidir con el que aparece en `SHA256SUMS.txt`.
   - Si la capa está en un sistema **proyectado en metros** (por ejemplo MAGNA-SIRGAS /
     Origen Nacional, EPSG:9377), las medidas se usan tal cual.
   - Si está en **coordenadas geográficas** (grados, por ejemplo WGS84 / EPSG:4326), el programa
-    la **reproyecta automáticamente a EPSG:9377** para obtener metros, y lo indica en
-    *Información del archivo*.
+    la **reproyecta automáticamente a EPSG:9377** para obtener metros, y lo indica con un aviso
+    en *Resumen de la capa*.
   - Si la capa **no tiene CRS** (falta el `.prj`), las medidas salen en las unidades originales
     del archivo y se muestra un aviso.
 
@@ -120,29 +123,46 @@ Los nombres se reconocen sin distinguir mayúsculas y también como parte de un 
 
 ## 4. Generar croquis paso a paso
 
+La ventana tiene tres pestañas: **Generador**, **Ayuda** (este manual) y **Acerca de**. En la
+pestaña **Generador** el trabajo se hace en tres pasos, de arriba abajo, y la **barra de estado**
+inferior indica siempre qué hacer a continuación.
+
 ![Pestaña Generador](img/pestana_generador.png)
 
-1. **Abrir los datos.** Pulse **Buscar archivo...** (`.zip` / `.shp`) o **Abrir GDB...**
+1. **Datos de entrada.** Pulse **Abrir archivo…** (`.zip` / `.shp`) o **Abrir carpeta GDB…**
    (carpeta `.gdb`). Si el archivo tiene varias capas o conjuntos de datos, elija uno en la
    lista (doble clic o **Enter** para aceptar, **Escape** para cancelar).
-2. **Revisar la información.** El recuadro *Información del archivo* muestra el número de
-   polígonos, el sistema de coordenadas, las columnas y cuántas construcciones se encontraron.
-3. **Revisar los campos.**
-   - *Campo identificador*: el texto verde **Detectado (N construcciones)** indica que se
-     encontró uno solo. Cámbielo si no es el correcto. Con `(ninguno)` se dibuja un croquis por
-     cada polígono.
-   - *Campo de pisos*: con `(ninguno)` los croquis no muestran pisos.
-4. **Generar.** Pulse **Generar Croquis**. Se abre una ventana con la lámina completa.
+2. **Campos de la capa.** El programa propone los campos y lo indica con la marca verde
+   **Detectado automáticamente**. Cámbielos si no son los correctos:
+   - *Identificador de la construcción*: los polígonos con el mismo valor se dibujan juntos.
+     Con `(ninguno)` se dibuja un croquis por cada polígono.
+   - *Número de pisos*: opcional; con `(ninguno)` los croquis no muestran pisos.
+
+   La tarjeta **Resumen de la capa** muestra el archivo, el número de polígonos y de
+   construcciones, el sistema de coordenadas y las columnas, junto con los avisos (por ejemplo,
+   si la capa se reproyectó o no tiene sistema de coordenadas).
+3. **Generar y exportar.** Pulse **Generar croquis**. Se abre una ventana con la lámina
+   completa.
    - Si hay más de **30 construcciones**, el programa pide confirmación porque la imagen puede
      tardar y consumir mucha memoria. Para lotes grandes conviene filtrar la capa antes en un
      SIG (QGIS / ArcGIS).
-5. **Explorar la vista previa** con la barra inferior:
+4. **Explorar la vista previa** con la barra inferior de esa ventana:
    - 🔍 **Zoom**: dibuje un rectángulo sobre la zona a ampliar.
    - ✥ **Mover**: arrastre para desplazarse.
    - 🏠 **Inicio**: vuelve a la vista completa.
 
 También puede abrir un archivo directamente desde la terminal:
 `GeneradorCroquis ruta/al/archivo.zip`.
+
+### La pestaña Ayuda
+
+Muestra este mismo manual con formato. Al abrirla, el programa descarga de GitHub la versión
+más reciente (marca verde **Versión más reciente (GitHub)**); si no hay internet, muestra la
+copia incluida en el programa (**Copia incluida · sin conexión**). Los enlaces del índice
+llevan a cada sección; **Recargar** vuelve a consultar y **Abrir en GitHub** lo abre en el
+navegador.
+
+![Pestaña Ayuda](img/pestana_ayuda.png)
 
 ## 5. Cómo leer un croquis
 
@@ -161,7 +181,7 @@ También puede abrir un archivo directamente desde la terminal:
 
 ## 6. Guardar y exportar
 
-1. Después de generar, pulse **Guardar Imagen**.
+1. Después de generar, pulse **Exportar imagen…**.
 2. Elija el nombre y el formato:
 
 | Formato | Recomendado para |
@@ -178,15 +198,16 @@ ventana de vista previa.
 
 ![Pestaña Acerca de](img/pestana_acerca_de.png)
 
-1. Abra la pestaña **Acerca de**. Ahí se ve la **versión instalada** y los créditos.
-2. Pulse **Comprobar actualizaciones**. El programa consulta GitHub (necesita internet; es la
+1. Abra la pestaña **Acerca de**. Ahí se ve la **versión instalada**, los créditos, la licencia
+   y los enlaces al repositorio y a este manual.
+2. Pulse **Buscar actualizaciones**. El programa consulta GitHub (necesita internet; es la
    única función que se conecta a la red).
 3. Si hay una versión nueva, el botón cambia a **Descargar vX.Y.Z**. Púlselo y elija la carpeta
    donde guardarla; la barra muestra el avance.
 4. Al terminar, **cierre el programa** y abra el archivo descargado. En Windows puede borrar el
    `.exe` anterior.
 
-**Ver versiones en GitHub** abre en el navegador la página del release con las novedades de
+**Ver todas las versiones** abre en el navegador la página del release con las novedades de
 cada versión.
 
 ## 8. Solución de problemas
@@ -196,7 +217,7 @@ cada versión.
 | *"Shapefile incompleto: … (falta .dbf)"* | Faltan archivos compañeros del `.shp`. | Copie juntos `.shp`, `.shx`, `.dbf` y `.prj`, o comprímalos en un `.zip`. |
 | *"No se encontró ningún .shp ni .gdb válido dentro del .zip"* | El `.zip` no tiene datos espaciales o están incompletos. | Revise el contenido del `.zip`. |
 | *"La capa no contiene polígonos"* | Se eligió una capa de puntos o líneas. | Elija la capa de construcciones / polígonos. |
-| *"No se pudo leer el GDB"* | Se seleccionó una carpeta que no es `.gdb` o la geodatabase está dañada. | Seleccione la carpeta que termina en `.gdb`. |
+| *"No se pudo leer el GDB"* | Se seleccionó una carpeta que no es `.gdb` o la geodatabase está dañada. | Con **Abrir carpeta GDB…**, seleccione la carpeta que termina en `.gdb`. |
 | Las medidas no parecen metros | La capa no tiene CRS (falta `.prj`). | Asigne el sistema de coordenadas en QGIS/ArcGIS y vuelva a exportar. |
 | Hay un croquis por polígono en lugar de por construcción | El campo identificador está en `(ninguno)` o no es el correcto. | Elija el campo que identifica cada construcción. |
 | *"No se pudo conectar con GitHub"* | Sin internet, proxy o firewall. | Revise la conexión o descargue manualmente desde la página de Releases. |

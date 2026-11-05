@@ -3,6 +3,8 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.3.0 | 2026-11-05 | URL del manual en bruto (pestaña Ayuda), rutas de
+#          |            | recursos (documentación local) y del logo.
 #   v1.2.0 | 2026-11-05 | Añade LICENCIA (GPL-3.0) y URL del manual de uso.
 #   v1.1.0 | 2026-11-05 | Añade repositorio de GitHub, URLs, tiempo de espera
 #          |            | de red, nombres de ejecutables por plataforma y
@@ -16,6 +18,7 @@
 
 from __future__ import annotations
 
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -30,6 +33,21 @@ OPCION_NINGUNO: str = "(ninguno)"
 
 # Identificador que se asigna a los polígonos con ID vacío.
 ID_VACIO: str = "SIN_ID"
+
+DIRECTORIO_PAQUETE: Path = Path(__file__).resolve().parent
+DIRECTORIO_ASSETS: Path = DIRECTORIO_PAQUETE / "assets"
+ARCHIVO_LOGO: Path = DIRECTORIO_ASSETS / "logo.png"
+ARCHIVO_ICONO_ICO: Path = DIRECTORIO_ASSETS / "icono.ico"
+
+
+def directorio_docs() -> Path | None:
+    """Carpeta docs/ incluida: dentro del ejecutable (PyInstaller) o en el repositorio."""
+    candidatos = [
+        Path(getattr(sys, "_MEIPASS", "")) / "docs",
+        DIRECTORIO_PAQUETE.parent.parent / "docs",
+    ]
+    return next((c for c in candidatos if (c / "MANUAL_DE_USO.md").is_file()), None)
+
 
 DIRECTORIO_USUARIO: Path = Path.home() / ".generador_croquis"
 ARCHIVO_LOG: Path = DIRECTORIO_USUARIO / "croquis.log"
@@ -82,6 +100,8 @@ URL_REPOSITORIO: str = f"https://github.com/{REPO_GITHUB}"
 URL_RELEASES: str = f"{URL_REPOSITORIO}/releases"
 URL_MANUAL: str = f"{URL_REPOSITORIO}/blob/main/docs/MANUAL_DE_USO.md"
 URL_LICENCIA: str = f"{URL_REPOSITORIO}/blob/main/LICENSE"
+URL_MANUAL_RAW: str = f"https://raw.githubusercontent.com/{REPO_GITHUB}/main/docs/MANUAL_DE_USO.md"
+URL_DOCS_RAW: str = f"https://raw.githubusercontent.com/{REPO_GITHUB}/main/docs/"
 LICENCIA: str = "GNU GPL v3.0 o posterior"
 URL_API_ULTIMO_RELEASE: str = f"https://api.github.com/repos/{REPO_GITHUB}/releases/latest"
 TIEMPO_ESPERA_RED: float = 15.0

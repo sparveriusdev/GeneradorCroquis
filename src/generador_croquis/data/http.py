@@ -3,6 +3,7 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.1.0 | 2026-11-05 | Añade obtener_texto() (manual de ayuda desde GitHub).
 #   v1.0.0 | 2026-11-05 | Creación. Transporte HTTP con la librería estándar
 #          |            | (urllib) y certificados de certifi para que HTTPS
 #          |            | funcione también dentro del ejecutable. Descarga a
@@ -33,6 +34,8 @@ _TAMANO_BLOQUE = 64 * 1024
 class TransporteHttp(Protocol):
     def obtener_json(self, url: str) -> Any: ...
 
+    def obtener_texto(self, url: str) -> str: ...
+
     def descargar(self, url: str, destino: Path, reportar: Reportar | None = None) -> Path: ...
 
 
@@ -59,7 +62,7 @@ class TransporteUrllib:
             return urllib.request.urlopen(peticion, timeout=self._tiempo_espera, context=self._ssl)
         except urllib.error.HTTPError as exc:
             if exc.code == 404:
-                raise ActualizacionError("Todavía no hay versiones publicadas.") from exc
+                raise ActualizacionError("El recurso no existe en GitHub (404).") from exc
             if exc.code == 403:
                 raise ActualizacionError(
                     "GitHub limitó temporalmente las consultas. Intente más tarde."
@@ -76,6 +79,13 @@ class TransporteUrllib:
                 return json.load(respuesta)
             except ValueError as exc:
                 raise ActualizacionError("Respuesta inválida de GitHub.") from exc
+
+    def obtener_texto(self, url: str) -> str:
+        with self._abrir(url) as respuesta:
+            try:
+                return respuesta.read().decode("utf-8")
+            except UnicodeDecodeError as exc:
+                raise ActualizacionError("El documento recibido no es texto UTF-8.") from exc
 
     def descargar(self, url: str, destino: Path, reportar: Reportar | None = None) -> Path:
         temporal = destino.with_name(destino.name + ".part")

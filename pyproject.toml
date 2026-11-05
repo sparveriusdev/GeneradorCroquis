@@ -3,6 +3,8 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.3.0 | 2026-11-05 | Pillow como dependencia directa (tema e iconos);
+#          |            | el logo fuente (logo.jpeg) no se incluye en el wheel.
 #   v1.2.0 | 2026-11-05 | Licencia GPL-3.0-or-later (PEP 639) y clasificador.
 #   v1.1.0 | 2026-11-05 | Añade certifi como dependencia directa (HTTPS para
 #          |            | comprobar actualizaciones desde el ejecutable).
@@ -23,7 +25,7 @@ license-files = ["LICENSE"]
 requires-python = ">=3.11,<3.14"
 authors = [
     { name = "Gabriel Gomez Baena" },
-    { name = "David Vasquez", email = "crdaospina@utp.edu.co" },
+    { name = "David Vasquez", email = "contactoc@cmpconsultoria.com" },
 ]
 keywords = ["gis", "croquis", "shapefile", "gdb", "catastro", "geopandas"]
 classifiers = [
@@ -37,6 +39,7 @@ dependencies = [
     "geopandas>=1.0",
     "matplotlib>=3.8",
     "numpy>=1.26",
+    "pillow>=10.0",
     "pyogrio>=0.9",
     "pyproj>=3.6",
     "shapely>=2.0",
@@ -62,6 +65,7 @@ path = "src/generador_croquis/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/generador_croquis"]
+exclude = ["src/generador_croquis/assets/logo.jpeg"]
 
 [tool.ruff]
 line-length = 100

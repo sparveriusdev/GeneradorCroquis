@@ -3,6 +3,11 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v2.0.0 | 2026-11-05 | Rediseño Material Design 3: barra superior con logo
+#          |            | y versión, navegación con indicador (Generador /
+#          |            | Ayuda / Acerca de), flujo en tarjetas numeradas,
+#          |            | resumen en tabla, barra de estado con progreso
+#          |            | lineal, icono de la aplicación y textos revisados.
 #   v1.1.0 | 2026-11-05 | Organiza la ventana en pestañas (ttk.Notebook):
 #          |            | "Generador" y "Acerca de" (PestanaAcercaDe).
 #   v1.0.0 | 2026-11-05 | Creación. Vista pasiva extraída de
@@ -14,164 +19,245 @@
 
 from __future__ import annotations
 
+import sys
 import tkinter as tk
 from collections.abc import Sequence
+from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 from typing import TYPE_CHECKING
 
+from PIL import Image, ImageTk
+
 from generador_croquis import __app_name__, __version__
-from generador_croquis.config import FORMATOS_EXPORTACION, OPCION_NINGUNO
+from generador_croquis.config import (
+    ARCHIVO_ICONO_ICO,
+    ARCHIVO_LOGO,
+    FORMATOS_EXPORTACION,
+    OPCION_NINGUNO,
+)
+from generador_croquis.view.componentes import (
+    BarraNavegacion,
+    CampoSeleccion,
+    Chip,
+    TablaClaveValor,
+    Tarjeta,
+)
 from generador_croquis.view.dialogos import DialogoSeleccion, VentanaFigura
-from generador_croquis.view.estilos import FUENTE, FUENTE_MONO, aplicar_estilos, centrar
+from generador_croquis.view.estilos import TemaMaterial, centrar
 from generador_croquis.view.pestana_acerca_de import PestanaAcercaDe
+from generador_croquis.view.pestana_ayuda import PestanaAyuda
 
 if TYPE_CHECKING:
     from matplotlib.figure import Figure
 
     from generador_croquis.controller.controlador import ControladorCroquis
 
+SIN_ARCHIVO = "Ningún archivo seleccionado"
+
+
+def aplicar_icono(ventana: tk.Tk | tk.Toplevel) -> list[ImageTk.PhotoImage]:
+    """Pone el logo como icono de la ventana. Devuelve las imágenes para retenerlas."""
+    imagenes: list[ImageTk.PhotoImage] = []
+    try:
+        if sys.platform == "win32" and ARCHIVO_ICONO_ICO.is_file():
+            ventana.iconbitmap(default=str(ARCHIVO_ICONO_ICO))
+        if ARCHIVO_LOGO.is_file():
+            logo = Image.open(ARCHIVO_LOGO)
+            imagenes = [
+                ImageTk.PhotoImage(logo.resize((s, s), Image.LANCZOS), master=ventana)
+                for s in (256, 64, 32, 16)
+            ]
+            ventana.iconphoto(True, *imagenes)
+    except (tk.TclError, OSError):
+        pass
+    return imagenes
+
 
 class VentanaPrincipal:
     """Implementación Tkinter de :class:`~generador_croquis.controller.VistaCroquis`."""
 
-    def __init__(self, root: tk.Tk):
+    def __init__(self, root: tk.Tk, tema: TemaMaterial | None = None):
         self.root = root
+        self.tema = tema or TemaMaterial(root)
         self._controlador: ControladorCroquis | None = None
         self._ventana_figura: VentanaFigura | None = None
+        self._iconos = aplicar_icono(root)
 
-        self.root.title(f"{__app_name__} v{__version__}")
-        self.root.minsize(640, 560)
-        aplicar_estilos(root)
-        centrar(root, 800, 740)
+        self.root.title(f"{__app_name__} {__version__}")
+        self.root.minsize(880, 640)
+        centrar(root, 1060, 760)
 
-        self.ruta_archivo = tk.StringVar()
+        self.ruta_archivo = tk.StringVar(value=SIN_ARCHIVO)
         self.campo_id = tk.StringVar()
         self.campo_pisos = tk.StringVar()
+        self.estado = tk.StringVar()
         self._construir()
 
     def conectar(self, controlador: ControladorCroquis) -> None:
         self._controlador = controlador
         self.root.protocol("WM_DELETE_WINDOW", self._al_cerrar)
+        controlador.iniciar()
 
     # ── construcción de widgets ──────────────────────────────────────────────
 
     def _construir(self) -> None:
-        self.pestanas = ttk.Notebook(self.root)
-        self.pestanas.pack(fill=tk.BOTH, expand=True, padx=8, pady=8)
-        main = ttk.Frame(self.pestanas, padding=20)
-        self.pestanas.add(main, text="  Generador  ")
-        self.acerca_de = PestanaAcercaDe(self.pestanas)
-        self.pestanas.add(self.acerca_de, text="  Acerca de  ")
+        self._barra_superior().pack(side=tk.TOP, fill=tk.X)
 
-        ttk.Label(main, text=__app_name__, style="Title.TLabel").pack(pady=(0, 2))
+        contenido = ttk.Frame(self.root)
+        self.navegacion = BarraNavegacion(self.root, contenido, self._al_cambiar_pestana)
+        self.navegacion.pack(side=tk.TOP, fill=tk.X)
+        self._barra_estado().pack(side=tk.BOTTOM, fill=tk.X)
+        contenido.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+
+        self.generador = self._pagina_generador(contenido)
+        self.ayuda = PestanaAyuda(contenido, self.tema)
+        self.acerca_de = PestanaAcercaDe(contenido, self.tema)
+        self.navegacion.agregar("generador", "Generador", self.generador)
+        self.navegacion.agregar("ayuda", "Ayuda", self.ayuda)
+        self.navegacion.agregar("acerca", "Acerca de", self.acerca_de)
+
+    def _barra_superior(self) -> ttk.Frame:
+        barra = ttk.Frame(self.root, style="AppBar.TFrame", padding=(20, 12))
+        if ARCHIVO_LOGO.is_file():
+            logo = Image.open(ARCHIVO_LOGO).resize((44, 44), Image.LANCZOS)
+            self._logo = ImageTk.PhotoImage(logo, master=self.root)
+            tk.Label(barra, image=self._logo, background=self.tema.c.primary, borderwidth=0).pack(
+                side=tk.LEFT, padx=(0, 14)
+            )
+        textos = ttk.Frame(barra, style="AppBar.TFrame")
+        textos.pack(side=tk.LEFT)
+        ttk.Label(textos, text=__app_name__, style="AppTitle.TLabel").pack(anchor="w")
         ttk.Label(
-            main,
-            text="Genera croquis técnicos desde Shapefile (.zip / .shp) o GDB (.gdb)",
-            style="Subtitle.TLabel",
-        ).pack(pady=(0, 15))
+            textos,
+            text="Croquis técnicos acotados a partir de Shapefile, ZIP o GDB",
+            style="AppSubtitle.TLabel",
+        ).pack(anchor="w")
+        Chip(barra, f"v{__version__}", "version").pack(side=tk.RIGHT)
+        return barra
 
-        f_arch = self._seccion(main, "Archivo de entrada")
-        fila = ttk.Frame(f_arch)
-        fila.pack(fill=tk.X)
-        ttk.Entry(fila, textvariable=self.ruta_archivo, font=(FUENTE, 9), state="readonly").pack(
-            side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 10)
+    def _barra_estado(self) -> ttk.Frame:
+        barra = ttk.Frame(self.root, style="Status.TFrame")
+        self.progreso = ttk.Progressbar(
+            barra, mode="indeterminate", style="Material.Horizontal.TProgressbar"
         )
+        self._linea_progreso = ttk.Frame(barra, style="Status.TFrame", height=4)
+        self._linea_progreso.pack(side=tk.TOP, fill=tk.X)
+        ttk.Label(barra, textvariable=self.estado, style="Status.TLabel", padding=(20, 8)).pack(
+            side=tk.LEFT
+        )
+        return barra
+
+    def _pagina_generador(self, parent: ttk.Frame) -> ttk.Frame:
+        pagina = ttk.Frame(parent, padding=(24, 20, 24, 16))
+        pagina.columnconfigure(0, weight=3, uniform="col")
+        pagina.columnconfigure(1, weight=2, uniform="col")
+        pagina.rowconfigure(1, weight=1)
+
+        # 1. Datos de entrada
+        entrada = Tarjeta(
+            pagina,
+            "1  Datos de entrada",
+            "Abra un Shapefile (.shp), un archivo .zip que contenga shapefiles o "
+            "geodatabases, o una carpeta File Geodatabase (.gdb).",
+        )
+        entrada.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 16))
+        cuerpo = entrada.cuerpo
+        cuerpo.columnconfigure(0, weight=1)
+        self.entrada_ruta = ttk.Entry(cuerpo, textvariable=self.ruta_archivo, state="readonly")
+        self.entrada_ruta.grid(row=0, column=0, sticky="ew", padx=(0, 12))
         ttk.Button(
-            fila, text="Buscar archivo...", style="Browse.TButton", command=self._buscar_archivo
-        ).pack(side=tk.RIGHT, padx=(5, 0))
+            cuerpo, text="Abrir archivo…", style="Filled.TButton", command=self._buscar_archivo
+        ).grid(row=0, column=1, padx=(0, 8))
         ttk.Button(
-            fila, text="Abrir GDB...", style="Browse.TButton", command=self._buscar_gdb
-        ).pack(side=tk.RIGHT)
+            cuerpo,
+            text="Abrir carpeta GDB…",
+            style="OutlinedCard.TButton",
+            command=self._buscar_gdb,
+        ).grid(row=0, column=2)
 
-        f_conf = self._seccion(main, "Configuración")
-        self.combo_id, self.nota_id = self._fila_combo(
-            f_conf, "Campo identificador (agrupar):", self.campo_id
+        # 2. Campos
+        campos = Tarjeta(
+            pagina,
+            "2  Campos de la capa",
+            "Indique cómo se agrupan los polígonos y de dónde sale el número de pisos.",
         )
-        self.combo_pisos, self.nota_pisos = self._fila_combo(
-            f_conf, "Campo de pisos:", self.campo_pisos
+        campos.grid(row=1, column=0, sticky="nsew", padx=(0, 16))
+        campos.cuerpo.columnconfigure(0, weight=1)
+        self.selector_id = CampoSeleccion(
+            campos.cuerpo,
+            "Identificador de la construcción",
+            "Los polígonos con el mismo valor se dibujan juntos como una sola construcción. "
+            f"Con {OPCION_NINGUNO} se dibuja un croquis por polígono.",
+            self.campo_id,
         )
+        self.selector_id.grid(row=0, column=0, sticky="ew", pady=(0, 16))
+        self.selector_pisos = CampoSeleccion(
+            campos.cuerpo,
+            "Número de pisos",
+            "Se muestra en la etiqueta de cada croquis. Si las partes difieren, se usa el "
+            "valor más alto.",
+            self.campo_pisos,
+        )
+        self.selector_pisos.grid(row=1, column=0, sticky="ew")
 
-        f_info = self._seccion(main, "Información del archivo")
-        self.text_info = tk.Text(
-            f_info,
-            height=9,
-            font=(FUENTE_MONO, 9),
-            bg="#ffffff",
-            fg="#495057",
-            relief="flat",
-            padx=10,
-            pady=10,
-            state="disabled",
-            wrap="word",
+        # Resumen
+        resumen = Tarjeta(pagina, "Resumen de la capa")
+        resumen.grid(row=1, column=1, sticky="nsew")
+        self.tabla_resumen = TablaClaveValor(
+            resumen.cuerpo, "Aquí aparecerán los datos del archivo cuando lo abra."
         )
-        self.text_info.pack(fill=tk.BOTH, expand=True)
+        self.tabla_resumen.pack(fill=tk.BOTH, expand=True)
 
-        f_btn = ttk.Frame(main)
-        f_btn.pack(fill=tk.X, pady=(10, 0))
-        self.btn_generar = ttk.Button(
-            f_btn,
-            text="Generar Croquis",
-            style="Action.TButton",
-            command=self._generar,
-            state="disabled",
+        # 3. Acciones
+        acciones = ttk.Frame(pagina)
+        acciones.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(16, 0))
+        ttk.Label(acciones, text="3  Genere y exporte los croquis", style="Body.TLabel").pack(
+            side=tk.LEFT
         )
-        self.btn_generar.pack(side=tk.LEFT, padx=(0, 10))
         self.btn_guardar = ttk.Button(
-            f_btn,
-            text="Guardar Imagen",
-            style="Action.TButton",
+            acciones,
+            text="Exportar imagen…",
+            style="Tonal.TButton",
             command=self._guardar,
             state="disabled",
         )
-        self.btn_guardar.pack(side=tk.LEFT)
-
-        self.progreso = ttk.Progressbar(main, mode="indeterminate")
-        self.progreso.pack(fill=tk.X, pady=(10, 0))
-
-    @staticmethod
-    def _seccion(parent: tk.Misc, titulo: str) -> ttk.LabelFrame:
-        marco = ttk.LabelFrame(
-            parent, text=f"  {titulo}  ", style="Section.TLabelframe", padding=15
+        self.btn_guardar.pack(side=tk.RIGHT)
+        self.btn_generar = ttk.Button(
+            acciones,
+            text="Generar croquis",
+            style="Filled.TButton",
+            command=self._generar,
+            state="disabled",
         )
-        marco.pack(fill=tk.X, pady=(0, 10))
-        return marco
-
-    @staticmethod
-    def _fila_combo(
-        parent: tk.Misc, texto: str, variable: tk.StringVar
-    ) -> tuple[ttk.Combobox, ttk.Label]:
-        fila = ttk.Frame(parent)
-        fila.pack(fill=tk.X, pady=(0, 8))
-        ttk.Label(fila, text=texto, width=30).pack(side=tk.LEFT, padx=(0, 10))
-        combo = ttk.Combobox(fila, textvariable=variable, state="disabled", width=25)
-        combo.pack(side=tk.LEFT, fill=tk.X, expand=True)
-        nota = ttk.Label(fila, text="", style="Nota.TLabel")
-        nota.pack(side=tk.LEFT, padx=(10, 0))
-        return combo, nota
+        self.btn_generar.pack(side=tk.RIGHT, padx=(0, 10))
+        return pagina
 
     # ── eventos de usuario → controlador ─────────────────────────────────────
+
+    def _al_cambiar_pestana(self, clave: str) -> None:
+        if clave == "ayuda":
+            self.ayuda.al_mostrarse()
 
     def _buscar_archivo(self) -> None:
         ruta = filedialog.askopenfilename(
             parent=self.root,
-            title="Seleccionar archivo (.zip o .shp)",
+            title="Abrir Shapefile o ZIP",
             filetypes=[
-                ("ZIP o Shapefile", "*.zip *.shp"),
+                ("Shapefile o ZIP", "*.zip *.shp"),
                 ("Archivos ZIP", "*.zip"),
-                ("Archivos Shapefile", "*.shp"),
+                ("Shapefile", "*.shp"),
                 ("Todos los archivos", "*.*"),
             ],
         )
         self._cargar(ruta)
 
     def _buscar_gdb(self) -> None:
-        self._cargar(
-            filedialog.askdirectory(parent=self.root, title="Seleccionar carpeta GDB (.gdb)")
-        )
+        self._cargar(filedialog.askdirectory(parent=self.root, title="Seleccione la carpeta .gdb"))
 
     def _cargar(self, ruta: str) -> None:
         if ruta and self._controlador:
             self.ruta_archivo.set(ruta)
+            self.entrada_ruta.xview_moveto(1.0)  # muestra el nombre del archivo, no el inicio
             self._controlador.cargar_archivo(ruta)
 
     def _generar(self) -> None:
@@ -180,10 +266,12 @@ class VentanaPrincipal:
 
     def _guardar(self) -> None:
         if self._controlador:
+            origen = Path(self.ruta_archivo.get())
             ruta = filedialog.asksaveasfilename(
                 parent=self.root,
-                title="Guardar imagen",
+                title="Exportar croquis",
                 defaultextension=".png",
+                initialfile=f"croquis_{origen.stem}" if origen.stem else "croquis",
                 filetypes=list(FORMATOS_EXPORTACION),
             )
             self._controlador.guardar(ruta)
@@ -195,11 +283,14 @@ class VentanaPrincipal:
 
     # ── implementación de VistaCroquis ───────────────────────────────────────
 
-    def mostrar_info(self, texto: str) -> None:
-        self.text_info.config(state="normal")
-        self.text_info.delete("1.0", tk.END)
-        self.text_info.insert("1.0", texto)
-        self.text_info.config(state="disabled")
+    def mostrar_estado(self, texto: str) -> None:
+        self.estado.set(texto)
+        self.root.update_idletasks()
+
+    def mostrar_resumen(self, filas: Sequence[tuple[str, str]], avisos: Sequence[str]) -> None:
+        self.tabla_resumen.mostrar(filas, avisos)
+        if not filas:
+            self.ruta_archivo.set(SIN_ARCHIVO)
 
     def mostrar_error(self, titulo: str, mensaje: str) -> None:
         messagebox.showerror(titulo, mensaje, parent=self.root)
@@ -214,7 +305,7 @@ class VentanaPrincipal:
         return messagebox.askyesno(titulo, mensaje, parent=self.root)
 
     def seleccionar_opcion(self, titulo: str, mensaje: str, opciones: Sequence[str]) -> str | None:
-        return DialogoSeleccion(self.root, titulo, mensaje, opciones).mostrar()
+        return DialogoSeleccion(self.root, self.tema, titulo, mensaje, opciones).mostrar()
 
     def configurar_campos(
         self,
@@ -225,14 +316,10 @@ class VentanaPrincipal:
         nota_pisos: str,
     ) -> None:
         valores = [OPCION_NINGUNO, *campos]
-        for combo, var, valor, nota, texto in (
-            (self.combo_id, self.campo_id, campo_id, self.nota_id, nota_id),
-            (self.combo_pisos, self.campo_pisos, campo_pisos, self.nota_pisos, nota_pisos),
-        ):
-            combo["values"] = valores
-            combo["state"] = "readonly"
-            var.set(valor or OPCION_NINGUNO)
-            nota.config(text=texto)
+        self.selector_id.configurar(valores, nota_id, campo_id is not None)
+        self.selector_pisos.configurar(valores, nota_pisos, campo_pisos is not None)
+        self.campo_id.set(campo_id or OPCION_NINGUNO)
+        self.campo_pisos.set(campo_pisos or OPCION_NINGUNO)
 
     def habilitar_generar(self, habilitado: bool) -> None:
         self.btn_generar["state"] = "normal" if habilitado else "disabled"
@@ -242,18 +329,24 @@ class VentanaPrincipal:
 
     def ocupado(self, activo: bool) -> None:
         if activo:
-            self.progreso.start()
+            self._linea_progreso.pack_forget()
+            self.progreso.pack(side=tk.TOP, fill=tk.X, before=self._primer_hijo_estado())
+            self.progreso.start(12)
             self.root.config(cursor="watch")
         else:
             self.progreso.stop()
+            self.progreso.pack_forget()
+            self._linea_progreso.pack(side=tk.TOP, fill=tk.X, before=self._primer_hijo_estado())
             self.root.config(cursor="")
         self.root.update_idletasks()
 
+    def _primer_hijo_estado(self) -> tk.Misc:
+        return next(h for h in self.progreso.master.winfo_children() if isinstance(h, ttk.Label))
+
     def mostrar_figura(self, figura: Figure) -> None:
         self.cerrar_figura()
-        self._ventana_figura = VentanaFigura(
-            self.root, figura, titulo=f"Croquis — {self.ruta_archivo.get()}"
-        )
+        nombre = Path(self.ruta_archivo.get()).name
+        self._ventana_figura = VentanaFigura(self.root, figura, titulo=f"Croquis — {nombre}")
 
     def cerrar_figura(self) -> None:
         if self._ventana_figura is not None:

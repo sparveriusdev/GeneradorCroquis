@@ -3,6 +3,9 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.2.0 | 2026-11-05 | Registra la fuente Roboto y activa DPI-awareness
+#          |            | antes de crear Tk; aplica el tema Material y conecta
+#          |            | la pestaña Ayuda.
 #   v1.1.0 | 2026-11-05 | Conecta la pestaña "Acerca de" (servicio de
 #          |            | actualizaciones, transporte HTTP y ejecutor Tk).
 #   v1.0.0 | 2026-11-05 | Creación. Raíz de composición: construye e inyecta
@@ -70,29 +73,36 @@ def main(argv: list[str] | None = None) -> int:
         matplotlib.use("TkAgg")
 
         from generador_croquis.controller import ControladorAcercaDe, ControladorCroquis
+        from generador_croquis.controller.ayuda import ControladorAyuda
         from generador_croquis.data import LectorCapas, TransporteUrllib
         from generador_croquis.rendering import RenderizadorMatplotlib
         from generador_croquis.services import ServicioActualizaciones, ServicioCroquis
+        from generador_croquis.services.ayuda import ServicioAyuda
         from generador_croquis.view import VentanaPrincipal
         from generador_croquis.view.ejecutor_tk import EjecutorTk
+        from generador_croquis.view.estilos import TemaMaterial
+        from generador_croquis.view.fuentes import activar_dpi_windows, registrar_fuentes
+
+        activar_dpi_windows()
+        registrar_fuentes()
 
         config = Configuracion()
+        transporte = TransporteUrllib()
         servicio = ServicioCroquis(
             lector=LectorCapas(),
             renderizador=RenderizadorMatplotlib(config.tema, config.cotas),
             config=config,
         )
-        root = tk.Tk()
-        vista = VentanaPrincipal(root)
+        root = tk.Tk(className="GeneradorCroquis")
+        tema = TemaMaterial(root)
+        ejecutor = EjecutorTk(root)
+        vista = VentanaPrincipal(root, tema)
         controlador = ControladorCroquis(vista, servicio)
         vista.conectar(controlador)
         vista.acerca_de.conectar(
-            ControladorAcercaDe(
-                vista.acerca_de,
-                ServicioActualizaciones(TransporteUrllib()),
-                EjecutorTk(root),
-            )
+            ControladorAcercaDe(vista.acerca_de, ServicioActualizaciones(transporte), ejecutor)
         )
+        vista.ayuda.conectar(ControladorAyuda(vista.ayuda, ServicioAyuda(transporte), ejecutor))
         if args.archivo:
             vista.ruta_archivo.set(args.archivo)
             root.after(100, controlador.cargar_archivo, args.archivo)

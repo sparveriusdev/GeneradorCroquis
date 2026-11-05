@@ -4,6 +4,7 @@ Archivo  : CHANGELOG.md
 Proyecto : Generador de Croquis
 ------------------------------------------------------------------------------
 CHANGELOG (versión interna del documento)
+  v1.2.0 | 2026-11-05 | Añade la versión 1.0.2 (rediseño Material Design).
   v1.1.1 | 2026-11-05 | 1.0.1: documentación y licencia.
   v1.1.0 | 2026-11-05 | Añade la versión 1.0.1 de la aplicación.
   v1.0.0 | 2026-11-05 | Creación. Historial de versiones de la aplicación
@@ -18,6 +19,29 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y versionado con [SemVer](https://semver.org/lang/es/).
 
 ## [Unreleased]
+
+## [1.0.2] - 2026-11-05
+
+### Añadido
+- **Rediseño de la interfaz con Material Design 3**: barra superior con el logo, navegación
+  por pestañas con indicador, tarjetas, botones redondeados (con relleno, tonales, con contorno
+  y de texto), campos con contorno, progreso lineal y barra de estado que indica el siguiente
+  paso.
+- Tipografía **Roboto** incluida en la aplicación (licencia SIL OFL 1.1), sin instalarla en el
+  sistema. En Windows el texto se ve nítido en pantallas de alta resolución.
+- **Logo e icono** de la aplicación en la ventana, la barra superior y los ejecutables
+  (`.exe`, `.app` y Linux).
+- Pestaña **Ayuda**: muestra el manual de uso con formato (títulos, tablas, imágenes, índice
+  navegable). Descarga de GitHub la versión más reciente y, sin conexión, usa la copia incluida.
+- **Resumen de la capa** en forma de tabla, con avisos destacados.
+
+### Cambiado
+- Textos de la interfaz más claros: pasos numerados, ayudas bajo cada campo y mensajes que
+  indican qué hacer a continuación.
+- Botones renombrados: *Abrir archivo…*, *Abrir carpeta GDB…*, *Generar croquis*,
+  *Exportar imagen…*, *Buscar actualizaciones*.
+- Al exportar se propone el nombre `croquis_<archivo>`.
+- Manual de uso actualizado con la nueva interfaz y capturas nuevas.
 
 ## [1.0.1] - 2026-11-05
 
@@ -64,6 +88,7 @@ Primera versión como programa estructurado, a partir del script `generador_v1.p
 ### Seguridad
 - Protección contra rutas maliciosas en archivos `.zip` (*zip slip*).
 
-[Unreleased]: ../../compare/v1.0.1...HEAD
+[Unreleased]: ../../compare/v1.0.2...HEAD
+[1.0.2]: ../../releases/tag/v1.0.2
 [1.0.1]: ../../releases/tag/v1.0.1
 [1.0.0]: ../../releases/tag/v1.0.0
