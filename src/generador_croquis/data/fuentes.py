@@ -3,6 +3,8 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.0.1 | 2026-11-05 | Rutas internas del .zip con '/' en todos los SO
+#          |            | (en Windows se mostraban con '\').
 #   v1.0.0 | 2026-11-05 | Creación. Patrón Strategy para fuentes de datos
 #          |            | (Shapefile, GDB, ZIP). Reemplaza el if/elif de
 #          |            | cargar_archivo() de generador_v1.py. Mejoras: el ZIP
@@ -160,7 +162,7 @@ class FuenteZip:
                     "No se encontró ningún .shp ni .gdb válido dentro del .zip." + detalle
                 )
 
-            opciones = {str(p.relative_to(destino)): p for p in (*gdbs, *shps)}
+            opciones = {p.relative_to(destino).as_posix(): p for p in (*gdbs, *shps)}
             elegido = elegir(
                 selector,
                 "Seleccionar contenido",
