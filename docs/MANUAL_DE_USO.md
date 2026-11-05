@@ -4,6 +4,9 @@ Archivo  : docs/MANUAL_DE_USO.md
 Proyecto : Generador de Croquis
 ------------------------------------------------------------------------------
 CHANGELOG (versión interna del documento)
+  v1.6.0 | 2026-11-05 | Versión 1.2.1: vista desde arriba (cada zona con el
+         |            | color del piso más alto), contornos superiores
+         |            | punteados y cota común con el color del piso más alto.
   v1.5.0 | 2026-11-05 | Opción «El campo indica» (piso de la unidad / total
          |            | de pisos) y etiqueta pequeña del identificador.
   v1.4.0 | 2026-11-05 | Versión 1.2.0: convenciones por piso, unidades
@@ -26,7 +29,7 @@ CHANGELOG (versión interna del documento)
 -->
 # Manual de uso — Generador de Croquis
 
-> Corresponde a la versión **1.2.0** de la aplicación.
+> Corresponde a la versión **1.2.1** de la aplicación.
 
 ## Contenido
 
@@ -241,21 +244,21 @@ navegador.
 | Etiqueta naranja pequeña | Identificador y pisos, dentro de la construcción. Los códigos largos se parten en varias líneas; el código completo está en el título. |
 | Cotas (`10.00 m`) | Longitud de cada lado del contorno exterior entre vértices principales, en metros, con dos decimales. Si el lado tiene vértices de ajuste, es la **suma de sus tramos**. |
 | Color de la cota | El mismo de la unidad a la que pertenece el lado. Cada piso tiene siempre el mismo color: piso 1 azul, piso 2 verde, piso 3 rojo, piso 4 morado… |
-| Cota gris | Lado común a varias unidades con la misma medida: se acota una sola vez. |
+| Cota de un lado común | Si varias unidades comparten un lado con la misma medida, se acota una sola vez, con el color del **piso más alto** que tiene ese lado (el mismo color de la zona que se ve junto a la cota). |
 | Línea fina hacia una cota | La cota se apartó de su lado para no tocar otra etiqueta; la línea la une con su lado. |
 | Línea punteada | Hueco interior (patio o vacío). Sus lados no se acotan. |
 | Puntos grandes | Vértices principales (esquinas reales). |
 | Puntos pequeños | Vértices de ajuste: forman parte del polígono, pero no se acotan. |
-| Recuadro «Convenciones» | Color y estilo de línea de cada piso, con su área, y la cota común. Aparece cuando la construcción tiene 2 o más unidades, o siempre si el campo de pisos indica el **piso de la unidad**. |
-| Línea continua gruesa con relleno | Unidad del piso más bajo (o unidad que no está encima de otra). |
-| Línea fina discontinua, sin relleno | Unidad que está **encima** de otra de un piso inferior. Si varios pisos coinciden en un borde, sus trazos se alternan para que se vean todos. |
+| Recuadro «Convenciones» | Color y estilo de línea de cada piso, con su área. Aparece cuando la construcción tiene 2 o más unidades, o siempre si el campo de pisos indica el **piso de la unidad**. |
+| Color de relleno de cada zona | Vista desde arriba: cada zona se pinta con el color (en tono claro) del **piso más alto** que la cubre. Así se ve de un vistazo qué parte tiene 2, 3 o 4 pisos. |
+| Línea continua gruesa | Contorno del piso más bajo (o de una unidad que no está encima de otra). |
+| Línea punteada | Contorno de una unidad que está **encima** de otra de un piso inferior. Deja ver los límites de cada piso aunque su zona quede cubierta por un piso más alto. |
 | Pie del croquis | Área total (m²) y perímetro total (m), sumando todas las partes. |
 | Ejes | Coordenadas completas del sistema de referencia de la capa, en metros (útiles para ubicar la construcción). Solo se muestran los decimales necesarios: normalmente ninguno. |
 
 > En construcciones con varias partes (por ejemplo, unidades superpuestas de distintos pisos),
 > el **área** y el **perímetro** son la suma de los de cada parte; el área de cada piso aparece
-> en las convenciones. Si dos unidades comparten un lado con la misma medida, ese lado se
-> acota **una sola vez** y en **gris**.
+> en las convenciones.
 
 ## 6. Guardar y exportar
 

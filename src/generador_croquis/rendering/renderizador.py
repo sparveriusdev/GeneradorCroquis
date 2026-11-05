@@ -3,6 +3,13 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v2.4.0 | 2026-11-05 | Retroalimentación de oficina: todos los pisos con
+#          |            | relleno de su color y contornos superiores punteados
+#          |            | (sin trazos alternados). Modo «vista_superior» (por
+#          |            | defecto: cada zona con el color claro del piso más
+#          |            | alto, sin mezclas) o «transparente». La cota común
+#          |            | toma el color del piso más alto que tiene ese lado
+#          |            | (sin gris ni entrada en la leyenda).
 #   v2.3.0 | 2026-11-05 | Según el significado del campo de pisos: con «piso
 #          |            | de la unidad», color por piso y leyenda aunque haya
 #          |            | una sola unidad. Etiqueta del identificador pequeña,
@@ -170,16 +177,18 @@ class RenderizadorMatplotlib:
     def _dibujar_construccion(
         self, ax: Axes, c: Construccion, opciones: OpcionesAcotado
     ) -> tuple[Text | None, list[_CotaPendiente]]:
-        t = self._tema
         if not c.partes:
             ax.axis("off")
             return None, []
         cotas: list[_CotaPendiente] = []
         colores = self._colores_por_parte(c)
-        estilos = self._estilos_por_parte(c)
+        encima = self._encima_por_parte(c)
+        niveles = {i: g.orden for g in c.grupos_por_piso() for i in g.indices}
         for i, parte in enumerate(c.partes):
             borde, relleno = colores[i]
-            for lado in self._dibujar_parte(ax, parte, relleno, borde, opciones, estilos[i]):
+            for lado in self._dibujar_parte(
+                ax, parte, relleno, borde, opciones, encima[i], niveles[i]
+            ):
                 comun = next(
                     (
                         otra
@@ -190,10 +199,10 @@ class RenderizadorMatplotlib:
                 )
                 if comun is None:
                     cotas.append(_CotaPendiente(lado, borde))
-                elif comun.color != borde:  # lado de varias unidades: una cota, color neutro
-                    comun.color = t.color_cota_comun
+                else:  # lado de varias unidades: una sola cota, con el color del piso más alto
+                    comun.color = borde  # (las partes llegan de abajo hacia arriba)
         if c.num_partes > 1 or c.pisos_por_ubicacion:
-            self._dibujar_convenciones(ax, c, colores, estilos, cotas)
+            self._dibujar_convenciones(ax, c, colores, encima, cotas)
         etiqueta = self._dibujar_etiqueta(ax, c)
         self._configurar_ejes(ax, c)
         return etiqueta, cotas
@@ -219,59 +228,50 @@ class RenderizadorMatplotlib:
                 colores[i] = par
         return colores
 
-    def _estilos_por_parte(self, c: Construccion) -> list[object | None]:
-        """Estilo de línea de cada parte: ``None`` = continua con relleno (unidad de abajo o
-        sin superposición); si no, línea discontinua desfasada por piso para que, donde
-        varios pisos coinciden, se alternen sus colores a lo largo del borde."""
-        t = self._tema
+    def _encima_por_parte(self, c: Construccion) -> list[bool]:
+        """True para las partes que están encima de otra de un piso inferior."""
         grupos = c.grupos_por_piso()
         orden = {i: g.orden for g in grupos for i in g.indices}
-        encima = [
-            g
-            for g in grupos
-            if any(
+        return [
+            any(
                 _solapa(c.partes[i], c.partes[j])
-                for i in g.indices
                 for j in range(c.num_partes)
-                if orden[j] < g.orden
+                if orden[j] < orden[i]
             )
+            for i in range(c.num_partes)
         ]
-        estilos: list[object | None] = [None] * c.num_partes
-        trazo, n = t.largo_trazo, len(encima)
-        for k, grupo in enumerate(encima):
-            estilo = (0, (trazo, trazo * 0.6)) if n == 1 else (k * trazo, (trazo, (n - 1) * trazo))
-            for i in grupo.indices:
-                estilos[i] = estilo
-        return estilos
+
+    def _relleno(self, color: str) -> tuple[tuple[float, ...], float]:
+        """Color y opacidad del relleno según el modo de superposición."""
+        t = self._tema
+        if t.modo_superposicion == "vista_superior":
+            # Tono claro y opaco: cada zona muestra el piso más alto, sin mezclar colores.
+            r, g, b, _ = to_rgba(color)
+            claro = t.claridad_vista_superior
+            return (r + (1 - r) * claro, g + (1 - g) * claro, b + (1 - b) * claro, 1.0), 1.0
+        return to_rgba(color), t.alfa_relleno
 
     def _dibujar_convenciones(
         self,
         ax: Axes,
         c: Construccion,
         colores: list[tuple[str, str]],
-        estilos: list[object | None],
+        encima: list[bool],
         cotas: list[_CotaPendiente],
     ) -> None:
         t = self._tema
         elementos = []
         for grupo in c.grupos_por_piso():
             borde, relleno = colores[grupo.indices[0]]
-            estilo = estilos[grupo.indices[0]]
+            superior = encima[grupo.indices[0]]
+            color, alfa = self._relleno(relleno)
             elementos.append(
                 Patch(
-                    facecolor="none" if estilo else to_rgba(relleno, t.alfa_relleno * 2),
+                    facecolor=to_rgba(color, min(alfa * 2, 1.0)),
                     edgecolor=borde,
-                    linewidth=t.ancho_borde_superior if estilo else t.ancho_borde,
-                    linestyle=estilo or "-",
+                    linewidth=t.ancho_borde_superior if superior else t.ancho_borde,
+                    linestyle=t.estilo_superior if superior else "-",
                     label=grupo.etiqueta,
-                )
-            )
-        if any(cota.color == t.color_cota_comun for cota in cotas):
-            elementos.append(
-                Patch(
-                    facecolor="white",
-                    edgecolor=t.color_cota_comun,
-                    label="Cota común a varias unidades",
                 )
             )
         leyenda = ax.legend(
@@ -296,26 +296,29 @@ class RenderizadorMatplotlib:
         color_relleno: str,
         color_borde: str,
         opciones: OpcionesAcotado,
-        estilo: object | None = None,
+        encima: bool = False,
+        nivel: int = 1,
     ) -> list[Lado]:
-        """Dibuja una parte. Si está encima de otra de un piso inferior, sin relleno y con
-        línea fina discontinua, para que el contorno de abajo siga viéndose."""
+        """Dibuja una parte con el relleno de su color. Si está encima de otra de un piso
+        inferior, su contorno es punteado para que el de abajo siga distinguiéndose."""
         t = self._tema
-        superpuesta = estilo is not None
-        ancho = t.ancho_borde_superior if superpuesta else t.ancho_borde
+        ancho = t.ancho_borde_superior if encima else t.ancho_borde
+        estilo = t.estilo_superior if encima else "-"
+        color, alfa = self._relleno(color_relleno)
         lados: list[Lado] = []
         for poly in poligonos_de(geom):
             xs, ys = poly.exterior.xy
-            if not superpuesta:
-                ax.fill(xs, ys, alpha=t.alfa_relleno, color=color_relleno, zorder=1)
-            ax.plot(
+            # Rellenos de abajo hacia arriba; todos los contornos quedan por encima.
+            ax.fill(xs, ys, color=color, alpha=alfa, linewidth=0, zorder=1 + nivel * 0.01)
+            (contorno,) = ax.plot(
                 xs,
                 ys,
                 color=color_borde,
                 linewidth=ancho,
                 linestyle=estilo,
-                zorder=3 if superpuesta else 2,
+                zorder=3 if encima else 2,
             )
+            contorno.set_dash_capstyle("round")
             for hueco in poly.interiors:  # patios, vacíos interiores
                 hx, hy = hueco.xy
                 ax.plot(hx, hy, color=color_borde, linewidth=1.0, linestyle="--", zorder=2)
@@ -332,7 +335,7 @@ class RenderizadorMatplotlib:
             principales = [lado.inicio for lado in lados_poly]
             if principales:
                 px, py = zip(*principales, strict=True)
-                tamano = t.tamano_vertice * (0.75 if superpuesta else 1.0)
+                tamano = t.tamano_vertice * (0.75 if encima else 1.0)
                 ax.plot(px, py, "o", color=color_borde, markersize=tamano, zorder=4)
             lados.extend(lados_poly)
         return lados

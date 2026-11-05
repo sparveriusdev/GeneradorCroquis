@@ -3,6 +3,9 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.7.0 | 2026-11-05 | Modo de superposición (vista_superior/transparente),
+#          |            | línea punteada para pisos superiores; se quita el
+#          |            | color gris de la cota común.
 #   v1.6.0 | 2026-11-05 | Tamaño y largo máximo de la etiqueta del ID;
 #          |            | etiqueta de fondo más suave.
 #   v1.5.0 | 2026-11-05 | Decimales automáticos (máximo 4), estilo de las
@@ -200,9 +203,12 @@ class TemaCroquis:
     alfa_relleno: float = 0.20
     ancho_borde: float = 1.8
     tamano_vertice: float = 4.5
-    ancho_borde_superior: float = 1.1  # unidades encima de otra de un piso inferior
-    largo_trazo: float = 4.0  # puntos; los pisos superpuestos alternan trazos desfasados
-    color_cota_comun: str = "#424242"
+    ancho_borde_superior: float = 1.6  # unidades encima de otra de un piso inferior
+    estilo_superior: tuple = (0, (0.1, 2.2))  # punteado (puntos redondos)
+    # "vista_superior": cada zona con el color del piso más alto (tonos claros, sin mezclas).
+    # "transparente": rellenos semitransparentes que se superponen.
+    modo_superposicion: str = "vista_superior"
+    claridad_vista_superior: float = 0.6  # 0 = color pleno, 1 = blanco
     tamano_vertice_intermedio: float = 2.0
     tamano_fuente_cota: float = 6.5
     tamano_fuente_etiqueta: float = 7.0

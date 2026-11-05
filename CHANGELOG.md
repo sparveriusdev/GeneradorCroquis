@@ -4,6 +4,7 @@ Archivo  : CHANGELOG.md
 Proyecto : Generador de Croquis
 ------------------------------------------------------------------------------
 CHANGELOG (versión interna del documento)
+  v1.5.0 | 2026-11-05 | Añade la versión 1.2.1 (vista desde arriba).
   v1.4.0 | 2026-11-05 | Añade la versión 1.2.0 (convenciones por piso).
   v1.3.1 | 2026-11-05 | Pendientes: avisos de GitHub en la Ayuda, manual.
   v1.3.0 | 2026-11-05 | Añade la versión 1.1.0 (acotado inteligente).
@@ -22,6 +23,20 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y versionado con [SemVer](https://semver.org/lang/es/).
 
 ## [Unreleased]
+
+## [1.2.1] - 2026-11-05
+
+Mejora visual a partir de la retroalimentación de la oficina: en la 1.2.0 los pisos superiores
+no tenían relleno y sus contornos de trazos alternados se leían como un achurado.
+
+### Cambiado
+- **Vista desde arriba**: todos los pisos vuelven a tener relleno de su color. Cada zona se
+  pinta con el color claro del piso más alto que la cubre, sin mezclas de colores.
+- Los contornos de los pisos superiores son **punteados** y de un solo color (antes, trazos
+  de varios colores alternados).
+- La **cota de un lado común** a varias unidades toma el color del piso más alto que tiene
+  ese lado, el mismo de la zona vecina. Desaparecen las cotas grises y la entrada «Cota
+  común» de la leyenda.
 
 ## [1.2.0] - 2026-11-05
 
@@ -151,7 +166,8 @@ Primera versión como programa estructurado, a partir del script `generador_v1.p
 ### Seguridad
 - Protección contra rutas maliciosas en archivos `.zip` (*zip slip*).
 
-[Unreleased]: ../../compare/v1.2.0...HEAD
+[Unreleased]: ../../compare/v1.2.1...HEAD
+[1.2.1]: ../../releases/tag/v1.2.1
 [1.2.0]: ../../releases/tag/v1.2.0
 [1.1.0]: ../../releases/tag/v1.1.0
 [1.0.2]: ../../releases/tag/v1.0.2

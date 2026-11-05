@@ -3,6 +3,8 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.4.0 | 2026-11-05 | Vista desde arriba: todos los pisos con relleno,
+#          |            | superiores punteados, cota común del piso más alto.
 #   v1.3.0 | 2026-11-05 | Significado de pisos (ubicación / total), leyenda con
 #          |            | una sola unidad, etiqueta abreviada, detección.
 #   v1.2.0 | 2026-11-05 | Convenciones por piso, colores fijos por piso,
@@ -60,16 +62,17 @@ def renderizar(*construcciones, opciones=None):
     return renderizador, figura
 
 
-def test_cotas_con_el_color_de_su_unidad_y_comunes_en_gris():
+def test_cotas_con_el_color_de_su_unidad_y_comun_del_piso_mas_alto():
     _, figura = renderizar(Construccion("A", (UNIDAD_1, UNIDAD_2)))
     colores = {t.get_color() for t in cotas_de(figura)}
-    assert colores == {TEMA.paleta_borde[0], TEMA.paleta_borde[1], TEMA.color_cota_comun}
+    assert colores == {TEMA.paleta_borde[0], TEMA.paleta_borde[1]}
     for texto in cotas_de(figura):
         assert texto.get_bbox_patch().get_edgecolor()[:3] == pytest.approx(
             tuple(int(texto.get_color()[i : i + 2], 16) / 255 for i in (1, 3, 5))
         )
+    # El lado izquierdo (8,60 m) es de ambas unidades: color de la de arriba (la segunda).
     (comun,) = [t for t in cotas_de(figura) if t.get_text() == "8.60 m"]
-    assert comun.get_color() == TEMA.color_cota_comun
+    assert comun.get_color() == TEMA.paleta_borde[1]
 
 
 def test_lado_comun_con_la_misma_medida_se_acota_una_vez():
@@ -156,18 +159,12 @@ def test_convenciones_por_piso_con_area():
         "Piso 1 · 96.00 m²",
         "Piso 2 · 96.00 m²",
         "Piso 3 · 48.00 m²",
-        "Cota común a varias unidades",
     ]
 
 
 def test_convenciones_sin_campo_de_pisos():
-    # Dos unidades contiguas: comparten la pared x = 12 (8,00 m), que es una cota común.
     _, figura = renderizar(Construccion("A", (PLANTA, box(12, 0, 15, 8))))
-    assert leyenda(figura) == [
-        "Unidad 1 · 96.00 m²",
-        "Unidad 2 · 24.00 m²",
-        "Cota común a varias unidades",
-    ]
+    assert leyenda(figura) == ["Unidad 1 · 96.00 m²", "Unidad 2 · 24.00 m²"]
 
 
 def test_color_fijo_por_piso():
@@ -183,15 +180,29 @@ def test_color_fijo_por_piso():
     assert TEMA.paleta_borde[0] not in bordes
 
 
-def test_unidad_superpuesta_discontinua_y_sin_relleno():
-    c = Construccion("A", (PLANTA, box(0, 0, 6, 8)), pisos=2, pisos_partes=(1, 2))
+def test_piso_superior_punteado_y_con_relleno_en_vista_desde_arriba():
+    c = Construccion(
+        "A", (PLANTA, box(0, 0, 6, 8)), pisos=2, pisos_partes=(1, 2), significado_pisos=UBIC
+    )
     _, figura = renderizar(c)
     ax = figura.axes[0]
     contornos = [lin for lin in ax.get_lines() if lin.get_linestyle() != "None"]
     estilos = {lin.get_color(): lin.get_linestyle() for lin in contornos}
     assert estilos[TEMA.paleta_borde[0]] == "-"
-    assert estilos[TEMA.paleta_borde[1]] == "--"
-    assert len(ax.patches) == 1  # solo el piso 1 tiene relleno
+    assert estilos[TEMA.paleta_borde[1]] != "-"  # punteado
+    rellenos = sorted(ax.patches, key=lambda p: p.get_zorder())
+    assert len(rellenos) == 2  # todos los pisos tienen relleno
+    assert all(p.get_alpha() == 1.0 for p in rellenos)  # opacos: sin mezclas de color
+    assert rellenos[1].get_zorder() > rellenos[0].get_zorder()  # el piso de arriba encima
+
+
+def test_modo_transparente_conserva_rellenos_semitransparentes():
+    from dataclasses import replace
+
+    tema = replace(TEMA, modo_superposicion="transparente")
+    c = Construccion("A", (PLANTA, box(0, 0, 6, 8)), pisos=2, pisos_partes=(1, 2))
+    figura = RenderizadorMatplotlib(tema).renderizar([c])
+    assert all(p.get_alpha() == TEMA.alfa_relleno for p in figura.axes[0].patches)
 
 
 def test_agrupacion_ordena_partes_de_abajo_hacia_arriba():
