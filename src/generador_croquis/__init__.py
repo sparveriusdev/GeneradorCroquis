@@ -3,6 +3,7 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.2.0 | 2026-11-05 | Versión de la aplicación 1.2.0.
 #   v1.1.0 | 2026-11-05 | Versión de la aplicación 1.1.0.
 #   v1.0.2 | 2026-11-05 | Versión de la aplicación 1.0.2.
 #   v1.0.1 | 2026-11-05 | Versión de la aplicación 1.0.1.
@@ -11,7 +12,7 @@
 # ==============================================================================
 """Generador de croquis técnicos de construcciones a partir de datos vectoriales."""
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 __app_name__ = "Generador de Croquis"
 
 __all__ = ["__app_name__", "__version__"]

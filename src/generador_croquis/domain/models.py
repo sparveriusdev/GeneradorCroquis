@@ -3,6 +3,9 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.4.0 | 2026-11-05 | Construccion guarda el piso de cada parte
+#          |            | (pisos_partes) y agrupa las partes por piso para la
+#          |            | leyenda (GrupoPiso).
 #   v1.3.1 | 2026-11-05 | ResumenCapa.filas() acepta el campo de agrupación
 #          |            | elegido y abrevia la lista de columnas.
 #   v1.3.0 | 2026-11-05 | Lado reemplaza a Cota: guarda extremos, longitud
@@ -100,10 +103,39 @@ class Construccion:
     identificador: str
     partes: tuple[Polygon | MultiPolygon, ...]
     pisos: int | None = None
+    # Piso de cada parte (mismo orden que ``partes``); vacío si no se conoce.
+    pisos_partes: tuple[int | None, ...] = ()
+
+    def __post_init__(self) -> None:
+        if self.pisos_partes and len(self.pisos_partes) != len(self.partes):
+            raise ValueError("pisos_partes debe tener un valor por cada parte")
 
     @property
     def num_partes(self) -> int:
         return len(self.partes)
+
+    def piso_de(self, indice: int) -> int | None:
+        return self.pisos_partes[indice] if self.pisos_partes else None
+
+    def grupos_por_piso(self) -> list[GrupoPiso]:
+        """Partes agrupadas por piso (de abajo hacia arriba), para la leyenda.
+
+        Sin información de pisos, cada parte es su propio grupo («Unidad N»).
+        """
+        if not any(p is not None for p in self.pisos_partes):
+            return [
+                GrupoPiso(None, (i,), self.partes[i].area, i + 1) for i in range(self.num_partes)
+            ]
+        grupos: dict[int | None, list[int]] = {}
+        for i in range(self.num_partes):
+            grupos.setdefault(self.piso_de(i), []).append(i)
+        orden = sorted(grupos, key=lambda p: (p is None, p if p is not None else 0))
+        return [
+            GrupoPiso(
+                piso, tuple(grupos[piso]), sum(self.partes[i].area for i in grupos[piso]), n + 1
+            )
+            for n, piso in enumerate(orden)
+        ]
 
     @property
     def area_total(self) -> float:
@@ -122,6 +154,22 @@ class Construccion:
         if self.pisos is None:
             return None
         return f"{self.pisos} piso{'s' if self.pisos != 1 else ''}"
+
+
+@dataclass(frozen=True)
+class GrupoPiso:
+    """Partes de una construcción que están en el mismo piso."""
+
+    piso: int | None
+    indices: tuple[int, ...]
+    area: float
+    orden: int  # posición 1, 2, 3… de abajo hacia arriba
+
+    @property
+    def etiqueta(self) -> str:
+        nombre = f"Piso {self.piso}" if self.piso is not None else f"Unidad {self.orden}"
+        unidades = f" ({len(self.indices)} unidades)" if len(self.indices) > 1 else ""
+        return f"{nombre} · {self.area:.2f} m²{unidades}"
 
 
 @dataclass(frozen=True)

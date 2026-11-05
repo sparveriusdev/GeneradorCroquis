@@ -3,6 +3,8 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.5.0 | 2026-11-05 | Decimales automáticos (máximo 4), estilo de las
+#          |            | unidades superpuestas y color de la cota común.
 #   v1.4.1 | 2026-11-05 | Decimales y número de marcas de los ejes.
 #   v1.4.0 | 2026-11-05 | ParametrosCotas: tolerancia de vértices principales
 #          |            | (0,15 m), lado común y colocación sin solapes.
@@ -196,10 +198,13 @@ class TemaCroquis:
     alfa_relleno: float = 0.20
     ancho_borde: float = 1.8
     tamano_vertice: float = 4.5
+    ancho_borde_superior: float = 1.1  # unidades encima de otra de un piso inferior
+    largo_trazo: float = 4.0  # puntos; los pisos superpuestos alternan trazos desfasados
+    color_cota_comun: str = "#424242"
     tamano_vertice_intermedio: float = 2.0
     tamano_fuente_cota: float = 6.5
     tamano_subplot_pulgadas: float = 6.0
-    decimales_coordenadas: int = 4
+    maximo_decimales_coordenadas: int = 4
     marcas_eje: int = 5
     margen_relativo: float = 0.3
     margen_minimo: float = 0.5

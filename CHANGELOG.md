@@ -4,6 +4,7 @@ Archivo  : CHANGELOG.md
 Proyecto : Generador de Croquis
 ------------------------------------------------------------------------------
 CHANGELOG (versión interna del documento)
+  v1.4.0 | 2026-11-05 | Añade la versión 1.2.0 (convenciones por piso).
   v1.3.1 | 2026-11-05 | Pendientes: avisos de GitHub en la Ayuda, manual.
   v1.3.0 | 2026-11-05 | Añade la versión 1.1.0 (acotado inteligente).
   v1.2.0 | 2026-11-05 | Añade la versión 1.0.2 (rediseño Material Design).
@@ -22,9 +23,26 @@ y versionado con [SemVer](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-05
+
 ### Añadido
+- **Convenciones (leyenda)** en cada croquis con 2 o más unidades: color y estilo de línea de
+  cada piso con su área (p. ej. «Piso 2 · 23.93 m²»), y la cota común.
+- **Color fijo por piso**: las unidades se ordenan de abajo hacia arriba y el piso 1 es siempre
+  azul, el 2 verde, el 3 rojo… en todos los croquis.
+- **Unidades superpuestas visibles**: el piso inferior va con línea gruesa y relleno; los
+  superiores con línea fina discontinua y sin relleno. Donde varios pisos coinciden, sus
+  trazos se alternan para que se vean todos.
 - Manual: subsección **Vértices principales y tolerancia** con valores orientativos,
   procedimiento de ajuste y comparación visual.
+
+### Cambiado
+- Las **cotas comunes** a varias unidades se muestran en gris neutro (antes, con el color de
+  la primera unidad).
+- **Coordenadas de los ejes con decimales automáticos**: en metros se muestran enteras
+  (`4811905`), sin «.0000»; solo aparecen decimales si las marcas están a menos de 1 m.
+- Una construcción de una sola unidad usa siempre el primer color, aunque el campo de pisos
+  indique el número total de pisos.
 
 ### Corregido
 - La pestaña Ayuda muestra los avisos de GitHub (`> [!WARNING]`, `[!NOTE]`…) con su título en
@@ -126,7 +144,8 @@ Primera versión como programa estructurado, a partir del script `generador_v1.p
 ### Seguridad
 - Protección contra rutas maliciosas en archivos `.zip` (*zip slip*).
 
-[Unreleased]: ../../compare/v1.1.0...HEAD
+[Unreleased]: ../../compare/v1.2.0...HEAD
+[1.2.0]: ../../releases/tag/v1.2.0
 [1.1.0]: ../../releases/tag/v1.1.0
 [1.0.2]: ../../releases/tag/v1.0.2
 [1.0.1]: ../../releases/tag/v1.0.1

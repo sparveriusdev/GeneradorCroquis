@@ -3,6 +3,11 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v2.2.0 | 2026-11-05 | Convenciones (leyenda) por piso con área; color fijo
+#          |            | por piso; unidades superpuestas con línea fina y
+#          |            | discontinua sin relleno (la de abajo sigue visible);
+#          |            | cotas comunes en gris neutro. Coordenadas con
+#          |            | decimales automáticos (FormatoCoordenadas).
 #   v2.1.0 | 2026-11-05 | Ejes con coordenadas completas a 4 decimales, sin
 #          |            | notación científica ni desplazamiento (+4.81e6). El
 #          |            | pie de área/perímetro pasa a ser la etiqueta del eje
@@ -37,13 +42,16 @@ from weakref import WeakKeyDictionary
 
 from matplotlib.axes import Axes
 from matplotlib.backends.backend_agg import FigureCanvasAgg
+from matplotlib.colors import to_rgba
 from matplotlib.figure import Figure
+from matplotlib.patches import Patch
 from matplotlib.text import Text
-from matplotlib.ticker import FormatStrFormatter, MaxNLocator
+from matplotlib.ticker import MaxNLocator
 
 from generador_croquis.config import ParametrosCotas, TemaCroquis
 from generador_croquis.domain.models import Construccion, Lado, OpcionesAcotado
 from generador_croquis.rendering.colocacion import ColocadorEtiquetas
+from generador_croquis.rendering.coordenadas import FormatoCoordenadas
 from generador_croquis.services.geometria import calcular_lados, poligonos_de
 
 log = logging.getLogger(__name__)
@@ -63,6 +71,14 @@ class Renderizador(Protocol):
 class _CotaPendiente:
     lado: Lado
     color: str
+
+
+def _solapa(a, b, minimo: float = 0.01) -> bool:
+    """True si ``a`` y ``b`` se superponen en más del 1 % del área de ``a``."""
+    try:
+        return a.intersection(b).area > minimo * a.area
+    except Exception:  # geometrías inválidas: se tratan como no superpuestas
+        return False
 
 
 class RenderizadorMatplotlib:
@@ -146,29 +162,146 @@ class RenderizadorMatplotlib:
             ax.axis("off")
             return None, []
         cotas: list[_CotaPendiente] = []
+        colores = self._colores_por_parte(c)
+        estilos = self._estilos_por_parte(c)
         for i, parte in enumerate(c.partes):
-            borde = t.paleta_borde[i % len(t.paleta_borde)]
-            relleno = t.paleta_relleno[i % len(t.paleta_relleno)]
-            for lado in self._dibujar_parte(ax, parte, relleno, borde, opciones):
-                comun = any(
-                    lado.coincide_con(otra.lado, self._cotas.tolerancia_lado_comun)
-                    for otra in cotas
+            borde, relleno = colores[i]
+            for lado in self._dibujar_parte(ax, parte, relleno, borde, opciones, estilos[i]):
+                comun = next(
+                    (
+                        otra
+                        for otra in cotas
+                        if lado.coincide_con(otra.lado, self._cotas.tolerancia_lado_comun)
+                    ),
+                    None,
                 )
-                if not comun:  # lado compartido con la misma medida: se acota una sola vez
+                if comun is None:
                     cotas.append(_CotaPendiente(lado, borde))
+                elif comun.color != borde:  # lado de varias unidades: una cota, color neutro
+                    comun.color = t.color_cota_comun
+        if c.num_partes > 1:
+            self._dibujar_convenciones(ax, c, colores, estilos, cotas)
         etiqueta = self._dibujar_etiqueta(ax, c)
         self._configurar_ejes(ax, c)
         return etiqueta, cotas
 
-    def _dibujar_parte(
-        self, ax: Axes, geom, color_relleno: str, color_borde: str, opciones: OpcionesAcotado
-    ) -> list[Lado]:
+    def _colores_por_parte(self, c: Construccion) -> list[tuple[str, str]]:
+        """(borde, relleno) de cada parte: fijo por piso (piso 1 siempre el primer color).
+
+        Con una sola unidad se usa el primer color: el campo de pisos puede ser el número
+        total de pisos (p. ej. NUMERO_PISOS) y no el piso donde está la unidad.
+        """
         t = self._tema
+        if c.num_partes == 1:  # una sola unidad: siempre el primer color, sin importar el piso
+            return [(t.paleta_borde[0], t.paleta_relleno[0])]
+        colores: list[tuple[str, str]] = [("", "")] * c.num_partes
+        for grupo in c.grupos_por_piso():
+            indice = (grupo.piso - 1) if grupo.piso is not None else (grupo.orden - 1)
+            par = (
+                t.paleta_borde[indice % len(t.paleta_borde)],
+                t.paleta_relleno[indice % len(t.paleta_relleno)],
+            )
+            for i in grupo.indices:
+                colores[i] = par
+        return colores
+
+    def _estilos_por_parte(self, c: Construccion) -> list[object | None]:
+        """Estilo de línea de cada parte: ``None`` = continua con relleno (unidad de abajo o
+        sin superposición); si no, línea discontinua desfasada por piso para que, donde
+        varios pisos coinciden, se alternen sus colores a lo largo del borde."""
+        t = self._tema
+        grupos = c.grupos_por_piso()
+        orden = {i: g.orden for g in grupos for i in g.indices}
+        encima = [
+            g
+            for g in grupos
+            if any(
+                _solapa(c.partes[i], c.partes[j])
+                for i in g.indices
+                for j in range(c.num_partes)
+                if orden[j] < g.orden
+            )
+        ]
+        estilos: list[object | None] = [None] * c.num_partes
+        trazo, n = t.largo_trazo, len(encima)
+        for k, grupo in enumerate(encima):
+            estilo = (0, (trazo, trazo * 0.6)) if n == 1 else (k * trazo, (trazo, (n - 1) * trazo))
+            for i in grupo.indices:
+                estilos[i] = estilo
+        return estilos
+
+    def _dibujar_convenciones(
+        self,
+        ax: Axes,
+        c: Construccion,
+        colores: list[tuple[str, str]],
+        estilos: list[object | None],
+        cotas: list[_CotaPendiente],
+    ) -> None:
+        t = self._tema
+        elementos = []
+        for grupo in c.grupos_por_piso():
+            borde, relleno = colores[grupo.indices[0]]
+            estilo = estilos[grupo.indices[0]]
+            elementos.append(
+                Patch(
+                    facecolor="none" if estilo else to_rgba(relleno, t.alfa_relleno * 2),
+                    edgecolor=borde,
+                    linewidth=t.ancho_borde_superior if estilo else t.ancho_borde,
+                    linestyle=estilo or "-",
+                    label=grupo.etiqueta,
+                )
+            )
+        if any(cota.color == t.color_cota_comun for cota in cotas):
+            elementos.append(
+                Patch(
+                    facecolor="white",
+                    edgecolor=t.color_cota_comun,
+                    label="Cota común a varias unidades",
+                )
+            )
+        leyenda = ax.legend(
+            handles=elementos,
+            title="Convenciones",
+            loc="upper left",
+            bbox_to_anchor=(1.02, 1.0),
+            borderaxespad=0,
+            fontsize=7,
+            title_fontsize=7.5,
+            frameon=True,
+            facecolor="white",
+            edgecolor=t.color_ejes,
+            handlelength=2.4,
+        )
+        leyenda.get_title().set_fontweight("bold")
+
+    def _dibujar_parte(
+        self,
+        ax: Axes,
+        geom,
+        color_relleno: str,
+        color_borde: str,
+        opciones: OpcionesAcotado,
+        estilo: object | None = None,
+    ) -> list[Lado]:
+        """Dibuja una parte. Si está encima de otra de un piso inferior, sin relleno y con
+        línea fina discontinua, para que el contorno de abajo siga viéndose."""
+        t = self._tema
+        superpuesta = estilo is not None
+        ancho = t.ancho_borde_superior if superpuesta else t.ancho_borde
         lados: list[Lado] = []
         for poly in poligonos_de(geom):
             xs, ys = poly.exterior.xy
-            ax.fill(xs, ys, alpha=t.alfa_relleno, color=color_relleno, zorder=1)
-            ax.plot(xs, ys, color=color_borde, linewidth=t.ancho_borde, zorder=2)
+            if not superpuesta:
+                ax.fill(xs, ys, alpha=t.alfa_relleno, color=color_relleno, zorder=1)
+            ax.plot(
+                xs,
+                ys,
+                color=color_borde,
+                linewidth=ancho,
+                linestyle=estilo,
+                zorder=3 if superpuesta else 2,
+            )
             for hueco in poly.interiors:  # patios, vacíos interiores
                 hx, hy = hueco.xy
                 ax.plot(hx, hy, color=color_borde, linewidth=1.0, linestyle="--", zorder=2)
@@ -185,7 +318,8 @@ class RenderizadorMatplotlib:
             principales = [lado.inicio for lado in lados_poly]
             if principales:
                 px, py = zip(*principales, strict=True)
-                ax.plot(px, py, "o", color=color_borde, markersize=t.tamano_vertice, zorder=4)
+                tamano = t.tamano_vertice * (0.75 if superpuesta else 1.0)
+                ax.plot(px, py, "o", color=color_borde, markersize=tamano, zorder=4)
             lados.extend(lados_poly)
         return lados
 
@@ -259,11 +393,11 @@ class RenderizadorMatplotlib:
         ax.set_aspect("equal")
         ax.grid(True, alpha=0.2, linestyle="--")
         ax.tick_params(labelsize=6, colors=t.color_ejes)
-        # Coordenadas completas, sin notación científica ni desplazamiento (+4.81e6).
-        formato = FormatStrFormatter(f"%.{t.decimales_coordenadas}f")
+        # Coordenadas completas y solo los decimales necesarios (sin «+4.81e6»).
         for eje in (ax.xaxis, ax.yaxis):
-            eje.set_major_formatter(formato)
-            eje.set_major_locator(MaxNLocator(nbins=t.marcas_eje))
+            eje.set_major_formatter(FormatoCoordenadas(t.maximo_decimales_coordenadas))
+            # Pasos 1-2-5: con metros las marcas caen en valores redondos.
+            eje.set_major_locator(MaxNLocator(nbins=t.marcas_eje, steps=[1, 2, 5, 10]))
         ax.tick_params(axis="x", labelrotation=30)
 
         minx, miny, maxx, maxy = c.union.bounds

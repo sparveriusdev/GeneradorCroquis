@@ -3,6 +3,7 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.3.0 | 2026-11-05 | Exporta GrupoPiso.
 #   v1.2.0 | 2026-11-05 | Exporta Lado, OpcionesAcotado y OpcionInvalidaError
 #          |            | (Cota se elimina).
 #   v1.1.0 | 2026-11-05 | Exporta Version y las entidades de actualización.
@@ -24,6 +25,7 @@ from generador_croquis.domain.models import (
     CapaCargada,
     Construccion,
     Descarga,
+    GrupoPiso,
     InfoRelease,
     Lado,
     OpcionesAcotado,
@@ -42,6 +44,7 @@ __all__ = [
     "CroquisError",
     "Descarga",
     "FormatoNoSoportadoError",
+    "GrupoPiso",
     "InfoRelease",
     "Lado",
     "OpcionInvalidaError",

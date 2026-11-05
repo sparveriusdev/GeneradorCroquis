@@ -3,6 +3,8 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.1.0 | 2026-11-05 | Guarda el piso de cada parte y ordena las partes
+#          |            | de abajo hacia arriba (colores fijos por piso).
 #   v1.0.0 | 2026-11-05 | Creación. Regla de negocio "polígonos con el mismo
 #          |            | identificador forman una construcción", extraída de
 #          |            | generar_croquis(). Mejora: los pisos se leen con
@@ -17,6 +19,11 @@ import pandas as pd
 
 from generador_croquis.config import ID_VACIO
 from generador_croquis.domain.models import CapaCargada, Construccion, SeleccionCampos
+
+
+def _piso(valor: object) -> int | None:
+    numero = pd.to_numeric(pd.Series([valor]), errors="coerce").iloc[0]
+    return None if pd.isna(numero) else int(numero)
 
 
 def _pisos(valores: pd.Series) -> int | None:
@@ -37,11 +44,22 @@ def agrupar_construcciones(capa: CapaCargada, seleccion: SeleccionCampos) -> lis
 
     construcciones = []
     for clave, grupo in gdf.groupby(claves, sort=True):
+        partes = list(grupo.geometry)
+        pisos_partes: list[int | None] = []
+        if campo_pisos:
+            pisos_partes = [_piso(v) for v in grupo[campo_pisos]]
+            # De abajo hacia arriba (sin piso al final); estable para partes del mismo piso.
+            orden = sorted(
+                range(len(partes)), key=lambda i: (pisos_partes[i] is None, pisos_partes[i] or 0)
+            )
+            partes = [partes[i] for i in orden]
+            pisos_partes = [pisos_partes[i] for i in orden]
         construcciones.append(
             Construccion(
                 identificador=str(clave),
-                partes=tuple(grupo.geometry),
+                partes=tuple(partes),
                 pisos=_pisos(grupo[campo_pisos]) if campo_pisos else None,
+                pisos_partes=tuple(pisos_partes),
             )
         )
     if not campo_id:

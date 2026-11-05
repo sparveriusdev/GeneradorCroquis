@@ -4,6 +4,8 @@ Archivo  : README.md
 Proyecto : Generador de Croquis
 ------------------------------------------------------------------------------
 CHANGELOG (versión interna del documento)
+  v2.2.0 | 2026-11-05 | Características de la 1.2.0: convenciones por piso y
+         |            | unidades superpuestas visibles.
   v2.1.0 | 2026-11-05 | Características de la 1.1.0: acotado por vértices
          |            | principales, color por unidad y cotas sin solapes.
   v2.0.0 | 2026-11-05 | Rediseño visual siguiendo el estilo del perfil del
@@ -65,7 +67,8 @@ con la medida de cada lado, el área, el perímetro y el número de pisos.
 | 🧠 **Detección automática** | Reconoce los campos de identificador (`codigo`, `npn`, `predio`, `objectid`…) y de pisos (`pisos`, `niveles`, `floors`…). |
 | 🧱 **Agrupación inteligente** | Los polígonos con el mismo identificador forman una sola construcción, con todas sus partes. |
 | 📏 **Acotado inteligente** | Solo se acotan los **vértices principales**: los de ajuste se agrupan y el lado mide la suma de sus tramos (tolerancia ajustable). |
-| 🎨 **Una unidad, un color** | En unidades superpuestas cada cota lleva el color de su polígono; los lados comunes se acotan una vez. |
+| 🎨 **Un piso, un color** | Cada piso tiene siempre su color y su cota del mismo color; los lados comunes se acotan una vez, en gris. |
+| 🗂️ **Convenciones por piso** | Leyenda con el color, el estilo de línea y el área de cada piso. Los pisos superiores se dibujan discontinuos para que el de abajo siga visible. |
 | 🧲 **Cotas sin solapes** | Cada etiqueta busca un hueco libre y, si se aleja, se une a su lado con una línea guía. |
 | 🌐 **Medidas en metros** | Las capas en grados se reproyectan solas a **EPSG:9377** (MAGNA-SIRGAS Origen Nacional). |
 | 🕳️ **Patios y multipolígonos** | Los huecos interiores se dibujan con línea punteada. |

@@ -4,6 +4,9 @@ Archivo  : docs/MANUAL_DE_USO.md
 Proyecto : Generador de Croquis
 ------------------------------------------------------------------------------
 CHANGELOG (versión interna del documento)
+  v1.4.0 | 2026-11-05 | Versión 1.2.0: convenciones por piso, unidades
+         |            | superpuestas discontinuas, cota común gris, ejes
+         |            | con decimales automáticos.
   v1.3.0 | 2026-11-05 | Nueva subsección «Vértices principales y tolerancia»:
          |            | qué son, cómo elegir la tolerancia (valores
          |            | orientativos), riesgos y comparación visual.
@@ -21,7 +24,7 @@ CHANGELOG (versión interna del documento)
 -->
 # Manual de uso — Generador de Croquis
 
-> Corresponde a la versión **1.1.0** de la aplicación.
+> Corresponde a la versión **1.2.0** de la aplicación.
 
 ## Contenido
 
@@ -143,7 +146,10 @@ inferior indica siempre qué hacer a continuación.
    **Detectado automáticamente**. Cámbielos si no son los correctos:
    - *Identificador de la construcción*: los polígonos con el mismo valor se dibujan juntos.
      Con `(ninguno)` se dibuja un croquis por cada polígono.
-   - *Número de pisos*: opcional; con `(ninguno)` los croquis no muestran pisos.
+   - *Número de pisos*: opcional; con `(ninguno)` los croquis no muestran pisos. Si la capa
+     tiene **una unidad por piso** (por ejemplo, unidades de construcción LADM-COL), elija el
+     campo que indica **en qué piso está cada unidad** (p. ej. `PLANTA_UBICACION`): con él se
+     ordenan y colorean los pisos y se arma la leyenda de convenciones.
    - *Acotado*: con **Acotar solo vértices principales** activado (recomendado), los vértices
      de ajuste que se apartan menos que la **tolerancia** (0,15 m por defecto) de la recta
      entre esquinas no se acotan: el lado se mide de esquina a esquina, sumando sus tramos.
@@ -224,17 +230,22 @@ navegador.
 | Título `Construcción: X  \|  N pisos  \|  M partes` | Identificador, pisos y número de polígonos que la forman. |
 | Recuadro naranja | Identificador y pisos, dentro de la construcción. |
 | Cotas (`10.00 m`) | Longitud de cada lado del contorno exterior entre vértices principales, en metros, con dos decimales. Si el lado tiene vértices de ajuste, es la **suma de sus tramos**. |
-| Color de la cota | El mismo de la unidad a la que pertenece el lado (azul la primera, verde la segunda…). |
+| Color de la cota | El mismo de la unidad a la que pertenece el lado. Cada piso tiene siempre el mismo color: piso 1 azul, piso 2 verde, piso 3 rojo, piso 4 morado… |
+| Cota gris | Lado común a varias unidades con la misma medida: se acota una sola vez. |
 | Línea fina hacia una cota | La cota se apartó de su lado para no tocar otra etiqueta; la línea la une con su lado. |
 | Línea punteada | Hueco interior (patio o vacío). Sus lados no se acotan. |
 | Puntos grandes | Vértices principales (esquinas reales). |
 | Puntos pequeños | Vértices de ajuste: forman parte del polígono, pero no se acotan. |
+| Recuadro «Convenciones» | Aparece cuando la construcción tiene 2 o más unidades: color y estilo de línea de cada piso, con su área, y la cota común. |
+| Línea continua gruesa con relleno | Unidad del piso más bajo (o unidad que no está encima de otra). |
+| Línea fina discontinua, sin relleno | Unidad que está **encima** de otra de un piso inferior. Si varios pisos coinciden en un borde, sus trazos se alternan para que se vean todos. |
 | Pie del croquis | Área total (m²) y perímetro total (m), sumando todas las partes. |
-| Ejes | Coordenadas completas del sistema de referencia de la capa, con 4 decimales (útiles para ubicar la construcción). |
+| Ejes | Coordenadas completas del sistema de referencia de la capa, en metros (útiles para ubicar la construcción). Solo se muestran los decimales necesarios: normalmente ninguno. |
 
 > En construcciones con varias partes (por ejemplo, unidades superpuestas de distintos pisos),
-> el **área** y el **perímetro** son la suma de los de cada parte. Si dos unidades comparten un
-> lado con la misma medida, ese lado se acota **una sola vez**, con el color de la primera.
+> el **área** y el **perímetro** son la suma de los de cada parte; el área de cada piso aparece
+> en las convenciones. Si dos unidades comparten un lado con la misma medida, ese lado se
+> acota **una sola vez** y en **gris**.
 
 ## 6. Guardar y exportar
 
