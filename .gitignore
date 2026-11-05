@@ -1,0 +1,41 @@
+# ==============================================================================
+# Archivo  : .gitignore
+# Proyecto : Generador de Croquis
+# ------------------------------------------------------------------------------
+# CHANGELOG (versión interna del documento)
+#   v1.1.0 | 2026-11-05 | Añade artefactos de PyInstaller, cobertura, cachés
+#          |            | de herramientas, entorno .env, archivos de sistema
+#          |            | y notas locales (ideas.md).
+#   v1.0.0 | 2026-11-05 | Archivo inicial generado por `uv init`.
+# ==============================================================================
+
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+.env/
+
+# PyInstaller / releases
+release/
+*.spec.bak
+
+# Pruebas y herramientas
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Sistema / editores
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Notas locales
+ideas.md

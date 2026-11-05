@@ -1,0 +1,55 @@
+# ==============================================================================
+# Archivo  : .github/workflows/ci.yml
+# Proyecto : Generador de Croquis
+# ------------------------------------------------------------------------------
+# CHANGELOG (versión interna del documento)
+#   v1.0.0 | 2026-11-05 | Creación. Integración continua: lint (ruff) y
+#          |            | pruebas (pytest) en Linux, Windows y macOS.
+# ==============================================================================
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Ruff (lint)
+        run: uvx ruff check .
+      - name: Ruff (formato)
+        run: uvx ruff format --check .
+
+  tests:
+    name: tests (${{ matrix.os }}, py${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.12"]
+        include:
+          - os: ubuntu-latest
+            python: "3.11"
+          - os: ubuntu-latest
+            python: "3.13"
+    env:
+      MPLBACKEND: Agg
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - name: Instalar dependencias
+        run: uv sync --python ${{ matrix.python }}
+      - name: Pytest
+        run: uv run pytest --cov=generador_croquis --cov-report=term-missing

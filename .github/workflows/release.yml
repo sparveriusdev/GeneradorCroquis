@@ -1,0 +1,143 @@
+# ==============================================================================
+# Archivo  : .github/workflows/release.yml
+# Proyecto : Generador de Croquis
+# ------------------------------------------------------------------------------
+# CHANGELOG (versión interna del documento)
+#   v1.0.0 | 2026-11-05 | Creación. Entrega continua: al publicar un tag
+#          |            | vX.Y.Z valida que coincida con __version__, prueba,
+#          |            | construye ejecutables con PyInstaller para Windows,
+#          |            | Linux y macOS, y publica un GitHub Release con los
+#          |            | binarios y las notas del CHANGELOG.md.
+#          |            | Se usa el Python de actions/setup-python (Tcl/Tk 8.6)
+#          |            | porque el Python gestionado por uv trae Tcl/Tk 9,
+#          |            | que PyInstaller aún no empaqueta correctamente.
+# ==============================================================================
+name: Release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch:  # ejecución manual: construye artefactos sin publicar release
+
+permissions:
+  contents: write
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: v
+        name: Leer y validar versión
+        shell: bash
+        run: |
+          VERSION=$(sed -nE 's/^__version__ = "([^"]+)"/\1/p' src/generador_croquis/__init__.py)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Versión del código: $VERSION"
+          if [[ "$GITHUB_REF_TYPE" == "tag" && "$GITHUB_REF_NAME" != "v$VERSION" ]]; then
+            echo "::error::El tag $GITHUB_REF_NAME no coincide con __version__ ($VERSION)"
+            exit 1
+          fi
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::$VERSION no es una versión SemVer válida"
+            exit 1
+          fi
+
+  build:
+    needs: version
+    name: build (${{ matrix.nombre }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            nombre: windows-x64
+          - os: ubuntu-22.04  # glibc más antigua = binario compatible con más distros
+            nombre: linux-x64
+          - os: macos-latest
+            nombre: macos-arm64
+    env:
+      MPLBACKEND: Agg
+      ARTEFACTO: GeneradorCroquis-${{ needs.version.outputs.version }}-${{ matrix.nombre }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: py
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Instalar dependencias (Python del sistema)
+        run: uv sync --python "${{ steps.py.outputs.python-path }}"
+
+      - name: Pruebas
+        run: uv run pytest -q
+
+      - name: Construir con PyInstaller
+        run: uv run pyinstaller packaging/generador_croquis.spec --noconfirm --clean
+
+      - name: Empaquetar (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force release | Out-Null
+          Copy-Item dist/GeneradorCroquis.exe "release/$env:ARTEFACTO.exe"
+
+      - name: Empaquetar (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          mkdir -p release
+          tar -C dist -czf "release/$ARTEFACTO.tar.gz" GeneradorCroquis
+
+      - name: Empaquetar (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          mkdir -p release
+          ditto -c -k --keepParent dist/GeneradorCroquis.app "release/$ARTEFACTO.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARTEFACTO }}
+          path: release/*
+          if-no-files-found: error
+
+  publish:
+    needs: [version, build]
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: release
+          merge-multiple: true
+
+      - name: Extraer notas de la versión desde CHANGELOG.md
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          awk -v v="$VERSION" '
+            $0 ~ "^## \\[" v "\\]" {flag=1; next}
+            /^## \[/ && flag {exit}
+            flag {print}
+          ' CHANGELOG.md > NOTAS.md
+          [ -s NOTAS.md ] || echo "Versión $VERSION" > NOTAS.md
+          (cd release && sha256sum * > SHA256SUMS.txt)
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: Generador de Croquis v${{ needs.version.outputs.version }}
+          body_path: NOTAS.md
+          files: release/*
+          prerelease: ${{ contains(needs.version.outputs.version, '-') }}

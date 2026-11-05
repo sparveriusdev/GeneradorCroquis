@@ -1,0 +1,70 @@
+# ==============================================================================
+# Archivo  : pyproject.toml
+# Proyecto : Generador de Croquis
+# ------------------------------------------------------------------------------
+# CHANGELOG (versión interna del documento)
+#   v1.0.0 | 2026-11-05 | Configuración completa del proyecto: metadatos, versión
+#          |            | dinámica (fuente única en __init__.py), dependencias,
+#          |            | grupo dev (pytest, ruff, pyinstaller), entry points,
+#          |            | configuración de ruff y pytest. Autores.
+#   v0.1.0 | 2026-11-05 | Archivo inicial generado por `uv init`.
+# ==============================================================================
+
+[project]
+name = "generador-croquis"
+dynamic = ["version"]
+description = "Genera croquis técnicos acotados de construcciones a partir de Shapefile, ZIP o File Geodatabase."
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+authors = [
+    { name = "Gabriel Gomez Baena" },
+    { name = "David Vasquez", email = "crdaospina@utp.edu.co" },
+]
+keywords = ["gis", "croquis", "shapefile", "gdb", "catastro", "geopandas"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: GIS",
+]
+dependencies = [
+    "geopandas>=1.0",
+    "matplotlib>=3.8",
+    "numpy>=1.26",
+    "pyogrio>=0.9",
+    "pyproj>=3.6",
+    "shapely>=2.0",
+]
+
+[project.gui-scripts]
+generador-croquis = "generador_croquis.app:main"
+
+[dependency-groups]
+dev = [
+    "pyinstaller>=6.10",
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.6",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/generador_croquis/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/generador_croquis"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+extend-exclude = ["legacy"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "N"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
