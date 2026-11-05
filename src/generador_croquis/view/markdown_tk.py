@@ -253,7 +253,7 @@ class VisorMarkdown(ttk.Frame):
                 txt.insert(tk.END, "\n", (tag,))
             txt.insert(tk.END, "\n", ("hr",))
         elif isinstance(bloque, Cita):
-            for i, parrafo in enumerate(bloque.contenido):
+            for parrafo in bloque.contenido:
                 self._insertar_linea(parrafo, ("cita",), "cita")
                 txt.insert(tk.END, "\n", ("cita",))  # el tag ya separa los párrafos
             txt.insert(tk.END, "\n", ("hr",))
