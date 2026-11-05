@@ -4,6 +4,8 @@ Archivo  : README.md
 Proyecto : Generador de Croquis
 ------------------------------------------------------------------------------
 CHANGELOG (versión interna del documento)
+  v2.1.0 | 2026-11-05 | Características de la 1.1.0: acotado por vértices
+         |            | principales, color por unidad y cotas sin solapes.
   v2.0.0 | 2026-11-05 | Rediseño visual siguiendo el estilo del perfil del
          |            | autor: cabecera centrada con logo y badges, botones de
          |            | descarga por sistema, galería de capturas, diagramas
@@ -62,7 +64,10 @@ con la medida de cada lado, el área, el perímetro y el número de pisos.
 | 📂 **Múltiples formatos** | `.shp`, `.zip` (con shapefiles o `.gdb` en cualquier subcarpeta) y carpetas File Geodatabase. Si hay varias capas, el programa pregunta cuál usar. |
 | 🧠 **Detección automática** | Reconoce los campos de identificador (`codigo`, `npn`, `predio`, `objectid`…) y de pisos (`pisos`, `niveles`, `floors`…). |
 | 🧱 **Agrupación inteligente** | Los polígonos con el mismo identificador forman una sola construcción, con todas sus partes. |
-| 📏 **Cotas en metros** | Medida de cada lado por fuera del polígono. Las capas en grados se reproyectan solas a **EPSG:9377** (MAGNA-SIRGAS Origen Nacional). |
+| 📏 **Acotado inteligente** | Solo se acotan los **vértices principales**: los de ajuste se agrupan y el lado mide la suma de sus tramos (tolerancia ajustable). |
+| 🎨 **Una unidad, un color** | En unidades superpuestas cada cota lleva el color de su polígono; los lados comunes se acotan una vez. |
+| 🧲 **Cotas sin solapes** | Cada etiqueta busca un hueco libre y, si se aleja, se une a su lado con una línea guía. |
+| 🌐 **Medidas en metros** | Las capas en grados se reproyectan solas a **EPSG:9377** (MAGNA-SIRGAS Origen Nacional). |
 | 🕳️ **Patios y multipolígonos** | Los huecos interiores se dibujan con línea punteada. |
 | 🖼️ **Exportación profesional** | PNG, JPG, PDF o SVG a 300 dpi, listos para informes y anexos técnicos. |
 | 🎨 **Interfaz Material Design** | Tipografía Roboto, tarjetas, pasos numerados y barra de estado que indica qué hacer después. |

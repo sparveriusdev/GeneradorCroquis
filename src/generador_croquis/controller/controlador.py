@@ -3,6 +3,10 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.2.0 | 2026-11-05 | cambiar_agrupacion(): el resumen sigue al campo
+#          |            | elegido. generar() recibe las opciones de acotado (solo
+#          |            | vértices principales y tolerancia, con coma o punto
+#          |            | decimal) y avisa si alguna cota quedó sin espacio.
 #   v1.1.0 | 2026-11-05 | Separa el resumen de la capa (mostrar_resumen) de
 #          |            | los mensajes de estado (mostrar_estado). Textos más
 #          |            | claros que indican el siguiente paso al usuario.
@@ -21,10 +25,19 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from generador_croquis.config import ARCHIVO_LOG, OPCION_NINGUNO
+from generador_croquis.config import ARCHIVO_LOG, OPCION_NINGUNO, TOLERANCIA_PRINCIPALES
 from generador_croquis.controller.vista import VistaCroquis
-from generador_croquis.domain.exceptions import CroquisError, OperacionCanceladaError
-from generador_croquis.domain.models import CapaCargada, SeleccionCampos
+from generador_croquis.domain.exceptions import (
+    CroquisError,
+    OpcionInvalidaError,
+    OperacionCanceladaError,
+)
+from generador_croquis.domain.models import (
+    CapaCargada,
+    OpcionesAcotado,
+    ResumenCapa,
+    SeleccionCampos,
+)
 from generador_croquis.services.servicio_croquis import ServicioCroquis
 
 if TYPE_CHECKING:
@@ -40,11 +53,21 @@ class EstadoSesion:
     """Estado mutable de la sesión de trabajo (modelo de la vista)."""
 
     capa: CapaCargada | None = None
+    resumen: ResumenCapa | None = None
     figura: Figure | None = None
 
 
 def _normalizar_campo(valor: str | None) -> str | None:
     return None if not valor or valor == OPCION_NINGUNO else valor
+
+
+def _opciones_acotado(solo_principales: bool, tolerancia: str | float) -> OpcionesAcotado:
+    """Interpreta la tolerancia escrita por el usuario (acepta coma o punto decimal)."""
+    try:
+        valor = float(str(tolerancia).strip().replace(",", "."))
+    except ValueError:
+        raise OpcionInvalidaError("Escriba la tolerancia en metros, por ejemplo 0,15.") from None
+    return OpcionesAcotado(solo_principales=bool(solo_principales), tolerancia=valor)
 
 
 def _plural(n: int, singular: str, plural: str) -> str:
@@ -70,14 +93,32 @@ class ControladorCroquis:
             return
         # Error o cancelación: no se deja una capa a medias.
         self.estado.capa = None
+        self.estado.resumen = None
         self._descartar_figura()
         self._vista.mostrar_resumen([], [])
         self._vista.habilitar_generar(False)
 
-    def generar(self, campo_id: str | None, campo_pisos: str | None) -> None:
+    def cambiar_agrupacion(self, campo_id: str | None) -> None:
+        """Actualiza el resumen cuando el usuario cambia el campo identificador."""
+        if self.estado.resumen is not None:
+            filas = self.estado.resumen.filas(_normalizar_campo(campo_id), usar_sugerido=False)
+            self._vista.mostrar_resumen(filas, list(self.estado.resumen.capa.avisos))
+
+    def generar(
+        self,
+        campo_id: str | None,
+        campo_pisos: str | None,
+        solo_principales: bool = True,
+        tolerancia: str | float = TOLERANCIA_PRINCIPALES,
+    ) -> None:
         capa = self.estado.capa
         if capa is None:
             self._vista.mostrar_aviso("Falta el archivo", "Primero abra un archivo de datos.")
+            return
+        try:
+            opciones = _opciones_acotado(solo_principales, tolerancia)
+        except OpcionInvalidaError as exc:
+            self._vista.mostrar_aviso("Tolerancia no válida", str(exc))
             return
 
         seleccion = SeleccionCampos(_normalizar_campo(campo_id), _normalizar_campo(campo_pisos))
@@ -92,14 +133,21 @@ class ControladorCroquis:
         def accion() -> None:
             self._descartar_figura()
             self._vista.mostrar_estado("Dibujando croquis…")
-            self.estado.figura = self._servicio.generar_figura(capa, seleccion)
+            self.estado.figura = self._servicio.generar_figura(capa, seleccion, opciones)
             self._vista.mostrar_figura(self.estado.figura)
             self._vista.habilitar_guardar(True)
             total = capa.contar_construcciones(seleccion.campo_id)
-            self._vista.mostrar_estado(
+            mensaje = (
                 f"Listo: {_plural(total, 'croquis generado', 'croquis generados')}. "
                 "Use «Exportar imagen» para guardarlos."
             )
+            sin_espacio = self._servicio.cotas_sin_espacio
+            if sin_espacio:
+                mensaje += (
+                    f" Atención: {_plural(sin_espacio, 'cota', 'cotas')} sin espacio libre "
+                    "(pueden tocarse con otras)."
+                )
+            self._vista.mostrar_estado(mensaje)
 
         self._ejecutar("No se pudieron generar los croquis", accion)
 
@@ -129,6 +177,7 @@ class ControladorCroquis:
         capa = resumen.capa
         self._descartar_figura()
         self.estado.capa = capa
+        self.estado.resumen = resumen
 
         id_sug, pisos_sug = resumen.campo_id_sugerido, resumen.campo_pisos_sugerido
         nota_id = "Detectado automáticamente" if id_sug else "Elíjalo manualmente"

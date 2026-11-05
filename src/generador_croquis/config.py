@@ -3,6 +3,11 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.4.1 | 2026-11-05 | Decimales y número de marcas de los ejes.
+#   v1.4.0 | 2026-11-05 | ParametrosCotas: tolerancia de vértices principales
+#          |            | (0,15 m), lado común y colocación sin solapes.
+#          |            | Paleta de bordes legible (las cotas usan el color
+#          |            | de su unidad); se eliminan color_cota_*.
 #   v1.3.0 | 2026-11-05 | URL del manual en bruto (pestaña Ayuda), rutas de
 #          |            | recursos (documentación local) y del logo.
 #   v1.2.0 | 2026-11-05 | Añade LICENCIA (GPL-3.0) y URL del manual de uso.
@@ -27,6 +32,10 @@ EPSG_METROS: int = 9377
 
 # Si hay más construcciones que esto, se pide confirmación antes de dibujar.
 MAX_CONSTRUCCIONES_AVISO: int = 30
+
+# Distancia (m) por debajo de la cual un vértice se considera de ajuste y no se acota.
+TOLERANCIA_PRINCIPALES: float = 0.15
+TOLERANCIA_MAXIMA: float = 10.0
 
 # Texto usado en los combos para indicar "sin campo".
 OPCION_NINGUNO: str = "(ninguno)"
@@ -141,35 +150,40 @@ FORMATOS_EXPORTACION: tuple[tuple[str, str], ...] = (
 
 @dataclass(frozen=True)
 class ParametrosCotas:
-    """Parámetros geométricos para el cálculo de cotas."""
+    """Parámetros del acotado: geometría y colocación de etiquetas."""
 
-    desplazamiento_relativo: float = 0.15
     longitud_minima: float = 0.01
+    tolerancia_principales: float = TOLERANCIA_PRINCIPALES
+    tolerancia_lado_comun: float = 0.05  # m: lados de unidades distintas que coinciden
+    separacion_px: float = 3.0  # hueco entre el lado y su etiqueta
+    anillos: int = 4  # distancias crecientes que se prueban antes de rendirse
 
 
 @dataclass(frozen=True)
 class TemaCroquis:
     """Parámetros visuales del croquis (colores, tamaños, resolución)."""
 
-    paleta_relleno: tuple[str, ...] = (
-        "#3498db",
-        "#2ecc71",
-        "#e67e22",
-        "#9b59b6",
-        "#1abc9c",
-        "#e74c3c",
-        "#f39c12",
-        "#34495e",
-    )
+    # Una pareja borde/relleno por unidad. Los bordes son oscuros para que las cotas,
+    # que usan el mismo color, se lean bien sobre fondo blanco.
     paleta_borde: tuple[str, ...] = (
-        "#2c3e50",
-        "#27ae60",
-        "#d35400",
-        "#8e44ad",
-        "#16a085",
-        "#c0392b",
-        "#f1c40f",
-        "#2c3e50",
+        "#1565C0",
+        "#2E7D32",
+        "#C62828",
+        "#6A1B9A",
+        "#E65100",
+        "#00838F",
+        "#AD1457",
+        "#4E342E",
+    )
+    paleta_relleno: tuple[str, ...] = (
+        "#64B5F6",
+        "#81C784",
+        "#E57373",
+        "#BA68C8",
+        "#FFB74D",
+        "#4DD0E1",
+        "#F06292",
+        "#A1887F",
     )
     fondo: str = "#FAFAFA"
     titulo: str = "CROQUIS DE CONSTRUCCIONES"
@@ -177,15 +191,16 @@ class TemaCroquis:
     color_subtitulo: str = "#2c3e50"
     color_pie: str = "#7f8c8d"
     color_ejes: str = "#95a5a6"
-    color_cota_texto: str = "#c0392b"
-    color_cota_borde: str = "#e74c3c"
     color_etiqueta_fondo: str = "#f39c12"
     color_etiqueta_borde: str = "#e67e22"
     alfa_relleno: float = 0.20
     ancho_borde: float = 1.8
-    tamano_vertice: float = 3.5
+    tamano_vertice: float = 4.5
+    tamano_vertice_intermedio: float = 2.0
     tamano_fuente_cota: float = 6.5
     tamano_subplot_pulgadas: float = 6.0
+    decimales_coordenadas: int = 4
+    marcas_eje: int = 5
     margen_relativo: float = 0.3
     margen_minimo: float = 0.5
     dpi_exportacion: int = 300

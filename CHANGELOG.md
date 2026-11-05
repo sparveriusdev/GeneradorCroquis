@@ -4,6 +4,7 @@ Archivo  : CHANGELOG.md
 Proyecto : Generador de Croquis
 ------------------------------------------------------------------------------
 CHANGELOG (versión interna del documento)
+  v1.3.0 | 2026-11-05 | Añade la versión 1.1.0 (acotado inteligente).
   v1.2.0 | 2026-11-05 | Añade la versión 1.0.2 (rediseño Material Design).
   v1.1.1 | 2026-11-05 | 1.0.1: documentación y licencia.
   v1.1.0 | 2026-11-05 | Añade la versión 1.0.1 de la aplicación.
@@ -19,6 +20,34 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y versionado con [SemVer](https://semver.org/lang/es/).
 
 ## [Unreleased]
+
+## [1.1.0] - 2026-11-05
+
+### Añadido
+- **Acotado por vértices principales**: los vértices de ajuste (los que se apartan menos que
+  la tolerancia de la recta entre esquinas) ya no generan cotas; el lado se mide de esquina a
+  esquina como la **suma de sus tramos**. Las esquinas reales y los quiebres cortos se
+  conservan. Opción **Acotar solo vértices principales** con **tolerancia** ajustable
+  (0,15 m por defecto, admite coma decimal).
+- **Cotas del color de su unidad**: en construcciones con varias partes (p. ej. unidades
+  superpuestas de distintos pisos) cada cota usa el color de su polígono.
+- **Cotas sin solapes**: cada etiqueta se coloca en la primera posición libre (afuera del
+  lado, desplazada a lo largo o más lejos, con línea guía). Si alguna no encuentra espacio,
+  la barra de estado lo indica.
+- Los lados comunes a varias unidades con la misma medida se acotan una sola vez.
+- Vértices principales (puntos grandes) y de ajuste (puntos pequeños) se distinguen.
+- La página Generador se desplaza en pantallas bajas (p. ej. portátiles de 768 px).
+
+### Cambiado
+- Paleta de unidades más oscura y legible sobre blanco (se quitó el amarillo).
+- Ejes con coordenadas completas a 4 decimales, sin notación científica (antes «+4.81e6»);
+  el área y el perímetro se muestran debajo de las coordenadas.
+- El resumen de la capa se actualiza al cambiar el campo identificador y abrevia la lista de
+  columnas.
+
+### Corregido
+- En polígonos cóncavos (forma de L, entrantes) algunas cotas podían quedar del lado de
+  adentro: la dirección exterior ahora se calcula con la orientación del contorno.
 
 ## [1.0.2] - 2026-11-05
 
@@ -88,7 +117,8 @@ Primera versión como programa estructurado, a partir del script `generador_v1.p
 ### Seguridad
 - Protección contra rutas maliciosas en archivos `.zip` (*zip slip*).
 
-[Unreleased]: ../../compare/v1.0.2...HEAD
+[Unreleased]: ../../compare/v1.1.0...HEAD
+[1.1.0]: ../../releases/tag/v1.1.0
 [1.0.2]: ../../releases/tag/v1.0.2
 [1.0.1]: ../../releases/tag/v1.0.1
 [1.0.0]: ../../releases/tag/v1.0.0

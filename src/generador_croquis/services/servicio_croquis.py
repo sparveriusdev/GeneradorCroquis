@@ -3,6 +3,8 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.1.0 | 2026-11-05 | generar_figura() recibe OpcionesAcotado e informa
+#          |            | cuántas cotas no encontraron espacio libre.
 #   v1.0.0 | 2026-11-05 | Creación. Fachada de casos de uso (cargar capa,
 #          |            | construir croquis, exportar) que orquesta lector,
 #          |            | servicios y renderizador inyectados.
@@ -20,6 +22,7 @@ from generador_croquis.data.lector import LectorCapas
 from generador_croquis.domain.models import (
     CapaCargada,
     Construccion,
+    OpcionesAcotado,
     ResumenCapa,
     SeleccionCampos,
 )
@@ -64,8 +67,18 @@ class ServicioCroquis:
     def construcciones(self, capa: CapaCargada, seleccion: SeleccionCampos) -> list[Construccion]:
         return agrupar_construcciones(capa, seleccion)
 
-    def generar_figura(self, capa: CapaCargada, seleccion: SeleccionCampos) -> Figure:
-        return self._renderizador.renderizar(self.construcciones(capa, seleccion))
+    def generar_figura(
+        self,
+        capa: CapaCargada,
+        seleccion: SeleccionCampos,
+        opciones: OpcionesAcotado | None = None,
+    ) -> Figure:
+        return self._renderizador.renderizar(self.construcciones(capa, seleccion), opciones)
+
+    @property
+    def cotas_sin_espacio(self) -> int:
+        """Cotas de la última figura que no encontraron un espacio libre."""
+        return int(getattr(self._renderizador, "cotas_sin_espacio", 0))
 
     def exportar(self, figura: Figure, ruta: str | Path) -> Path:
         ruta = Path(ruta)

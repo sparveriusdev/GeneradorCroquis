@@ -3,6 +3,10 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v2.1.0 | 2026-11-05 | Página Generador desplazable (pantallas bajas); el
+#          |            | resumen sigue al campo identificador elegido.
+#          |            | Sección «Acotado» en la tarjeta de campos: casilla
+#          |            | «Acotar solo vértices principales» y tolerancia (m).
 #   v2.0.0 | 2026-11-05 | Rediseño Material Design 3: barra superior con logo
 #          |            | y versión, navegación con indicador (Generador /
 #          |            | Ayuda / Acerca de), flujo en tarjetas numeradas,
@@ -34,11 +38,14 @@ from generador_croquis.config import (
     ARCHIVO_LOGO,
     FORMATOS_EXPORTACION,
     OPCION_NINGUNO,
+    TOLERANCIA_MAXIMA,
+    TOLERANCIA_PRINCIPALES,
 )
 from generador_croquis.view.componentes import (
     BarraNavegacion,
     CampoSeleccion,
     Chip,
+    PaginaDesplazable,
     TablaClaveValor,
     Tarjeta,
 )
@@ -84,12 +91,14 @@ class VentanaPrincipal:
         self._iconos = aplicar_icono(root)
 
         self.root.title(f"{__app_name__} {__version__}")
-        self.root.minsize(880, 640)
-        centrar(root, 1060, 760)
+        self.root.minsize(880, 560)
+        centrar(root, 1060, 860)
 
         self.ruta_archivo = tk.StringVar(value=SIN_ARCHIVO)
         self.campo_id = tk.StringVar()
         self.campo_pisos = tk.StringVar()
+        self.solo_principales = tk.BooleanVar(value=True)
+        self.tolerancia = tk.StringVar(value=f"{TOLERANCIA_PRINCIPALES:.2f}")
         self.estado = tk.StringVar()
         self._construir()
 
@@ -148,7 +157,9 @@ class VentanaPrincipal:
         return barra
 
     def _pagina_generador(self, parent: ttk.Frame) -> ttk.Frame:
-        pagina = ttk.Frame(parent, padding=(24, 20, 24, 16))
+        desplazable = PaginaDesplazable(parent, self.tema.c.surface)
+        pagina = ttk.Frame(desplazable.contenido, padding=(24, 14, 24, 12))
+        pagina.pack(fill=tk.BOTH, expand=True)
         pagina.columnconfigure(0, weight=3, uniform="col")
         pagina.columnconfigure(1, weight=2, uniform="col")
         pagina.rowconfigure(1, weight=1)
@@ -160,7 +171,7 @@ class VentanaPrincipal:
             "Abra un Shapefile (.shp), un archivo .zip que contenga shapefiles o "
             "geodatabases, o una carpeta File Geodatabase (.gdb).",
         )
-        entrada.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 16))
+        entrada.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 12))
         cuerpo = entrada.cuerpo
         cuerpo.columnconfigure(0, weight=1)
         self.entrada_ruta = ttk.Entry(cuerpo, textvariable=self.ruta_archivo, state="readonly")
@@ -190,7 +201,8 @@ class VentanaPrincipal:
             f"Con {OPCION_NINGUNO} se dibuja un croquis por polígono.",
             self.campo_id,
         )
-        self.selector_id.grid(row=0, column=0, sticky="ew", pady=(0, 16))
+        self.selector_id.grid(row=0, column=0, sticky="ew", pady=(0, 12))
+        self.selector_id.combo.bind("<<ComboboxSelected>>", self._al_cambiar_agrupacion)
         self.selector_pisos = CampoSeleccion(
             campos.cuerpo,
             "Número de pisos",
@@ -199,6 +211,7 @@ class VentanaPrincipal:
             self.campo_pisos,
         )
         self.selector_pisos.grid(row=1, column=0, sticky="ew")
+        self._seccion_acotado(campos.cuerpo).grid(row=2, column=0, sticky="ew", pady=(12, 0))
 
         # Resumen
         resumen = Tarjeta(pagina, "Resumen de la capa")
@@ -210,7 +223,7 @@ class VentanaPrincipal:
 
         # 3. Acciones
         acciones = ttk.Frame(pagina)
-        acciones.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(16, 0))
+        acciones.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(12, 0))
         ttk.Label(acciones, text="3  Genere y exporte los croquis", style="Body.TLabel").pack(
             side=tk.LEFT
         )
@@ -230,7 +243,53 @@ class VentanaPrincipal:
             state="disabled",
         )
         self.btn_generar.pack(side=tk.RIGHT, padx=(0, 10))
-        return pagina
+        return desplazable
+
+    def _seccion_acotado(self, parent: ttk.Frame) -> ttk.Frame:
+        marco = ttk.Frame(parent, style="CardInner.TFrame")
+        marco.columnconfigure(1, weight=1)
+        ttk.Frame(marco, style="Divider.TFrame", height=1).grid(
+            row=0, column=0, columnspan=3, sticky="ew", pady=(0, 10)
+        )
+        ttk.Label(marco, text="Acotado", style="Key.TLabel").grid(row=1, column=0, sticky="w")
+        ttk.Checkbutton(
+            marco,
+            text="Acotar solo vértices principales",
+            variable=self.solo_principales,
+            style="Card.TCheckbutton",
+            command=self._al_cambiar_acotado,
+        ).grid(row=2, column=0, columnspan=2, sticky="w", pady=(6, 0))
+        fila = ttk.Frame(marco, style="CardInner.TFrame")
+        fila.grid(row=2, column=2, sticky="e", pady=(6, 0))
+        ttk.Label(fila, text="Tolerancia", style="CardBody.TLabel").pack(side=tk.LEFT, padx=(0, 8))
+        self.campo_tolerancia = ttk.Spinbox(
+            fila,
+            textvariable=self.tolerancia,
+            from_=0.0,
+            to=TOLERANCIA_MAXIMA,
+            increment=0.05,
+            width=6,
+            justify="right",
+        )
+        self.campo_tolerancia.pack(side=tk.LEFT)
+        ttk.Label(fila, text="m", style="CardBody.TLabel").pack(side=tk.LEFT, padx=(6, 0))
+        ttk.Label(
+            marco,
+            text="Los vértices que se apartan menos que la tolerancia de la recta entre "
+            "esquinas se consideran de ajuste: no se acotan y el lado mide la suma de sus "
+            "tramos.",
+            style="Helper.TLabel",
+            wraplength=520,
+            justify="left",
+        ).grid(row=3, column=0, columnspan=3, sticky="w", pady=(6, 0))
+        return marco
+
+    def _al_cambiar_agrupacion(self, _evento: tk.Event | None = None) -> None:
+        if self._controlador:
+            self._controlador.cambiar_agrupacion(self.campo_id.get())
+
+    def _al_cambiar_acotado(self) -> None:
+        self.campo_tolerancia.state(["!disabled"] if self.solo_principales.get() else ["disabled"])
 
     # ── eventos de usuario → controlador ─────────────────────────────────────
 
@@ -262,7 +321,12 @@ class VentanaPrincipal:
 
     def _generar(self) -> None:
         if self._controlador:
-            self._controlador.generar(self.campo_id.get(), self.campo_pisos.get())
+            self._controlador.generar(
+                self.campo_id.get(),
+                self.campo_pisos.get(),
+                self.solo_principales.get(),
+                self.tolerancia.get(),
+            )
 
     def _guardar(self) -> None:
         if self._controlador:

@@ -4,6 +4,9 @@ Archivo  : docs/MANUAL_DE_USO.md
 Proyecto : Generador de Croquis
 ------------------------------------------------------------------------------
 CHANGELOG (versión interna del documento)
+  v1.2.0 | 2026-11-05 | Versión 1.1.0: acotado por vértices principales,
+         |            | cotas del color de su unidad, sin solapes; nueva
+         |            | opción «Acotado» y ejemplo actualizado.
   v1.1.0 | 2026-11-05 | Actualizado a la interfaz 1.0.2 (Material Design):
          |            | nuevos nombres de botones, tarjetas, resumen,
          |            | barra de estado, pestaña Ayuda y capturas nuevas.
@@ -15,7 +18,7 @@ CHANGELOG (versión interna del documento)
 -->
 # Manual de uso — Generador de Croquis
 
-> Corresponde a la versión **1.0.2** de la aplicación.
+> Corresponde a la versión **1.1.0** de la aplicación.
 
 ## Contenido
 
@@ -35,8 +38,9 @@ CHANGELOG (versión interna del documento)
 El Generador de Croquis lee una capa de **polígonos** (construcciones, predios, edificaciones)
 y produce una lámina con un **croquis técnico por construcción**. Cada croquis muestra:
 
-- La planta de la construcción, con cada parte en un color distinto.
-- La **medida de cada lado** en metros (cotas en rojo, por fuera del polígono).
+- La planta de la construcción, con cada parte (unidad) en un color distinto.
+- La **medida de cada lado** en metros, entre los **vértices principales**, con la cota del
+  mismo color que su unidad y sin que las etiquetas se monten unas sobre otras.
 - Los **huecos interiores** (patios, vacíos) con línea punteada.
 - Una etiqueta con el **identificador** y el **número de pisos**.
 - El **área total** y el **perímetro total** al pie del croquis.
@@ -137,6 +141,11 @@ inferior indica siempre qué hacer a continuación.
    - *Identificador de la construcción*: los polígonos con el mismo valor se dibujan juntos.
      Con `(ninguno)` se dibuja un croquis por cada polígono.
    - *Número de pisos*: opcional; con `(ninguno)` los croquis no muestran pisos.
+   - *Acotado*: con **Acotar solo vértices principales** activado (recomendado), los vértices
+     de ajuste que se apartan menos que la **tolerancia** (0,15 m por defecto) de la recta
+     entre esquinas no se acotan: el lado se mide de esquina a esquina, sumando sus tramos.
+     Suba la tolerancia si aún aparecen cotas de tramos muy cortos; bájela o desactive la
+     casilla para acotar vértice a vértice. Acepta coma o punto decimal (`0,15` o `0.15`).
 
    La tarjeta **Resumen de la capa** muestra el archivo, el número de polígonos y de
    construcciones, el sistema de coordenadas y las columnas, junto con los avisos (por ejemplo,
@@ -170,14 +179,18 @@ navegador.
 |---|---|
 | Título `Construcción: X  \|  N pisos  \|  M partes` | Identificador, pisos y número de polígonos que la forman. |
 | Recuadro naranja | Identificador y pisos, dentro de la construcción. |
-| Rótulos rojos (`10.00 m`) | Longitud de cada lado del contorno exterior, en metros, con dos decimales. |
+| Cotas (`10.00 m`) | Longitud de cada lado del contorno exterior entre vértices principales, en metros, con dos decimales. Si el lado tiene vértices de ajuste, es la **suma de sus tramos**. |
+| Color de la cota | El mismo de la unidad a la que pertenece el lado (azul la primera, verde la segunda…). |
+| Línea fina hacia una cota | La cota se apartó de su lado para no tocar otra etiqueta; la línea la une con su lado. |
 | Línea punteada | Hueco interior (patio o vacío). Sus lados no se acotan. |
-| Puntos en las esquinas | Vértices del polígono. |
+| Puntos grandes | Vértices principales (esquinas reales). |
+| Puntos pequeños | Vértices de ajuste: forman parte del polígono, pero no se acotan. |
 | Pie del croquis | Área total (m²) y perímetro total (m), sumando todas las partes. |
-| Ejes | Coordenadas del sistema de referencia de la capa (útiles para ubicar la construcción). |
+| Ejes | Coordenadas completas del sistema de referencia de la capa, con 4 decimales (útiles para ubicar la construcción). |
 
-> En construcciones con varias partes, el **área** y el **perímetro** son la suma de los de
-> cada parte; los lados compartidos entre partes se cuentan en ambas.
+> En construcciones con varias partes (por ejemplo, unidades superpuestas de distintos pisos),
+> el **área** y el **perímetro** son la suma de los de cada parte. Si dos unidades comparten un
+> lado con la misma medida, ese lado se acota **una sola vez**, con el color de la primera.
 
 ## 6. Guardar y exportar
 

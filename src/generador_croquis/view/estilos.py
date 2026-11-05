@@ -3,6 +3,8 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v2.1.0 | 2026-11-05 | Estilos para casilla (Card.TCheckbutton) y campo
+#          |            | numérico (TSpinbox) con contorno.
 #   v2.0.0 | 2026-11-05 | Reescritura: tema Material Design 3 para ttk.
 #          |            | Tokens de color y tipografía (Roboto), botones
 #          |            | Filled / Tonal / Outlined / Text y tarjetas con
@@ -337,7 +339,7 @@ class TemaMaterial:
             "arrowsize": 14,
         }
         enfocado = [("focus", c.primary), ("disabled", c.outline_variant)]
-        for nombre in ("TEntry", "TCombobox"):
+        for nombre in ("TEntry", "TCombobox", "TSpinbox"):
             s.configure(nombre, **campo)
             s.map(
                 nombre,
@@ -356,6 +358,24 @@ class TemaMaterial:
                     ("readonly", c.surface_container_lowest),
                 ],
             )
+
+        # Casilla de verificación sobre tarjeta
+        s.configure(
+            "Card.TCheckbutton",
+            background=c.surface_container_lowest,
+            foreground=c.on_surface,
+            font=t.body_medium,
+            indicatorbackground=c.surface_container_lowest,
+            indicatorforeground=c.on_primary,
+            indicatormargin=(0, 0, 8, 0),
+            focuscolor=c.surface_container_lowest,
+        )
+        s.map(
+            "Card.TCheckbutton",
+            background=[("active", c.surface_container_lowest)],
+            indicatorbackground=[("selected", c.primary), ("active", c.primary_container)],
+            indicatorforeground=[("selected", c.on_primary)],
+        )
 
         # Progreso lineal Material (4 px)
         s.configure(

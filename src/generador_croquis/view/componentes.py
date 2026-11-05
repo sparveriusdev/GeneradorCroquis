@@ -3,6 +3,8 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.1.0 | 2026-11-05 | PaginaDesplazable (pantallas bajas, p. ej. 768 px)
+#          |            | y TablaClaveValor con ajuste de texto al ancho real.
 #   v1.0.0 | 2026-11-05 | Creación. Componentes Material reutilizables:
 #          |            | Tarjeta, BarraNavegacion (pestañas con indicador),
 #          |            | Chip, CampoSeleccion (combo + texto de ayuda) y
@@ -27,7 +29,7 @@ class Tarjeta(ttk.Frame):
         descripcion: str | None = None,
         icono: str | None = None,
     ):
-        super().__init__(parent, style="Card.TFrame", padding=(20, 18))
+        super().__init__(parent, style="Card.TFrame", padding=(20, 14))
         self.columnconfigure(0, weight=1)
         fila = 0
         if titulo:
@@ -135,30 +137,101 @@ class CampoSeleccion(ttk.Frame):
 
 
 class TablaClaveValor(ttk.Frame):
-    """Lista de pares etiqueta/valor alineados en dos columnas."""
+    """Lista de pares etiqueta/valor alineados en dos columnas.
+
+    El texto de los valores se ajusta al ancho disponible para no desbordar la tarjeta.
+    """
 
     def __init__(self, parent: tk.Misc, vacio: str):
         super().__init__(parent, style="CardInner.TFrame")
         self.columnconfigure(1, weight=1)
         self._vacio = vacio
+        self._valores: list[ttk.Label] = []
+        self._anchos: list[ttk.Label] = []  # etiquetas que ocupan todo el ancho
+        self.bind("<Configure>", self._ajustar, add="+")
         self.mostrar([])
 
     def mostrar(self, filas: Sequence[tuple[str, str]], avisos: Sequence[str] = ()) -> None:
         for hijo in self.winfo_children():
             hijo.destroy()
+        self._valores, self._anchos = [], []
         if not filas:
-            ttk.Label(
-                self, text=self._vacio, style="CardBody.TLabel", wraplength=360, justify="left"
-            ).grid(row=0, column=0, columnspan=2, sticky="w")
-            return
+            vacio = ttk.Label(self, text=self._vacio, style="CardBody.TLabel", justify="left")
+            vacio.grid(row=0, column=0, columnspan=2, sticky="w")
+            self._anchos.append(vacio)
         for i, (clave, valor) in enumerate(filas):
             ttk.Label(self, text=clave, style="Key.TLabel").grid(
                 row=i, column=0, sticky="nw", padx=(0, 16), pady=3
             )
-            ttk.Label(self, text=valor, style="Value.TLabel", wraplength=320, justify="left").grid(
-                row=i, column=1, sticky="w", pady=3
-            )
+            etiqueta = ttk.Label(self, text=valor, style="Value.TLabel", justify="left")
+            etiqueta.grid(row=i, column=1, sticky="w", pady=3)
+            self._valores.append(etiqueta)
         for j, aviso in enumerate(avisos, start=len(filas)):
-            ttk.Label(
-                self, text=f"⚠  {aviso}", style="Warning.TLabel", wraplength=420, justify="left"
-            ).grid(row=j, column=0, columnspan=2, sticky="ew", pady=(8, 0))
+            etiqueta = ttk.Label(self, text=f"⚠  {aviso}", style="Warning.TLabel", justify="left")
+            etiqueta.grid(row=j, column=0, columnspan=2, sticky="ew", pady=(8, 0))
+            self._anchos.append(etiqueta)
+        self.after_idle(self._ajustar)
+
+    def _ajustar(self, _evento: tk.Event | None = None) -> None:
+        ancho = self.winfo_width()
+        if ancho <= 1:
+            return
+        claves = self.grid_bbox(0, 0)[2] if self._valores else 0
+        for etiqueta in self._valores:
+            etiqueta.configure(wraplength=max(ancho - claves - 24, 120))
+        for etiqueta in self._anchos:
+            etiqueta.configure(wraplength=max(ancho - 24, 160))
+
+
+class PaginaDesplazable(ttk.Frame):
+    """Contenedor con barra de desplazamiento vertical que solo aparece si hace falta.
+
+    Coloque los widgets dentro de ``.contenido``; su ancho sigue al de la ventana.
+    """
+
+    def __init__(self, parent: tk.Misc, fondo: str):
+        super().__init__(parent)
+        self._lienzo = tk.Canvas(self, highlightthickness=0, borderwidth=0, background=fondo)
+        self._barra = ttk.Scrollbar(
+            self,
+            orient="vertical",
+            command=self._lienzo.yview,
+            style="Material.Vertical.TScrollbar",
+        )
+        self._lienzo.configure(yscrollcommand=self._barra.set)
+        self._lienzo.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.contenido = ttk.Frame(self._lienzo)
+        self._ventana = self._lienzo.create_window((0, 0), window=self.contenido, anchor="nw")
+        self.contenido.bind("<Configure>", self._actualizar)
+        self._lienzo.bind("<Configure>", self._actualizar)
+        # Un manejador global que solo actúa si el puntero está sobre esta página.
+        for evento in ("<MouseWheel>", "<Button-4>", "<Button-5>"):
+            self._lienzo.bind_all(evento, self._desplazar, add="+")
+
+    def _actualizar(self, _evento: tk.Event | None = None) -> None:
+        alto_lienzo = self._lienzo.winfo_height()
+        alto_contenido = self.contenido.winfo_reqheight()
+        # El contenido ocupa al menos todo el alto visible (para que las filas elásticas crezcan).
+        self._lienzo.itemconfigure(
+            self._ventana, width=self._lienzo.winfo_width(), height=max(alto_contenido, alto_lienzo)
+        )
+        self._lienzo.configure(scrollregion=(0, 0, 0, max(alto_contenido, alto_lienzo)))
+        if alto_contenido > alto_lienzo + 1:
+            self._barra.pack(side=tk.RIGHT, fill=tk.Y)
+        else:
+            self._barra.pack_forget()
+            self._lienzo.yview_moveto(0)
+
+    def _desplazar(self, evento: tk.Event) -> None:
+        if not self._barra.winfo_ismapped() or not self.winfo_ismapped():
+            return
+        debajo = self.winfo_containing(evento.x_root, evento.y_root)
+        if debajo is None or not str(debajo).startswith(str(self)):
+            return
+        if evento.num == 4:
+            paso = -3
+        elif evento.num == 5:
+            paso = 3
+        else:
+            paso = (-1 if evento.delta > 0 else 1) * (1 if abs(evento.delta) < 120 else 3)
+        self._lienzo.yview_scroll(paso, "units")

@@ -3,6 +3,7 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.2.0 | 2026-11-05 | Añade OpcionInvalidaError (opciones de acotado).
 #   v1.1.0 | 2026-11-05 | Añade ActualizacionError (fallos de red / GitHub).
 #   v1.0.0 | 2026-11-05 | Creación. Jerarquía de excepciones propia para
 #          |            | distinguir errores esperados (mensaje al usuario) de
@@ -33,3 +34,7 @@ class CapaSinPoligonosError(CroquisError):
 
 class ActualizacionError(CroquisError):
     """No se pudo consultar o descargar una versión desde GitHub."""
+
+
+class OpcionInvalidaError(CroquisError):
+    """Una opción introducida por el usuario no es válida."""

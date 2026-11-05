@@ -3,6 +3,8 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.2.0 | 2026-11-05 | Exporta Lado, OpcionesAcotado y OpcionInvalidaError
+#          |            | (Cota se elimina).
 #   v1.1.0 | 2026-11-05 | Exporta Version y las entidades de actualización.
 #   v1.0.0 | 2026-11-05 | Creación. Expone el modelo de datos y las excepciones
 #          |            | del dominio.
@@ -15,14 +17,16 @@ from generador_croquis.domain.exceptions import (
     CapaSinPoligonosError,
     CroquisError,
     FormatoNoSoportadoError,
+    OpcionInvalidaError,
     OperacionCanceladaError,
 )
 from generador_croquis.domain.models import (
     CapaCargada,
     Construccion,
-    Cota,
     Descarga,
     InfoRelease,
+    Lado,
+    OpcionesAcotado,
     ResultadoActualizacion,
     ResumenCapa,
     SeleccionCampos,
@@ -35,11 +39,13 @@ __all__ = [
     "CapaCargada",
     "CapaSinPoligonosError",
     "Construccion",
-    "Cota",
     "CroquisError",
     "Descarga",
     "FormatoNoSoportadoError",
     "InfoRelease",
+    "Lado",
+    "OpcionInvalidaError",
+    "OpcionesAcotado",
     "OperacionCanceladaError",
     "ResultadoActualizacion",
     "ResumenCapa",

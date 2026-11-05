@@ -3,6 +3,8 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.2.0 | 2026-11-05 | Prueba de la tolerancia de acotado (coma decimal
+#          |            | y valores inválidos).
 #   v1.1.0 | 2026-11-05 | Adapta la vista falsa a mostrar_estado/mostrar_resumen.
 #   v1.0.0 | 2026-11-05 | Creación. Pruebas del controlador con una vista
 #          |            | falsa (demuestra el desacople MVC).
@@ -124,3 +126,19 @@ def test_confirmacion_de_muchas_construcciones(vista, shapefile):
     ctrl.generar("(ninguno)", "(ninguno)")
     assert vista.eventos[-1][0] == "confirmar"
     assert vista.figuras == []
+
+
+@pytest.mark.parametrize("tolerancia", ["abc", "-1", "50"])
+def test_tolerancia_invalida_avisa_y_no_genera(vista, shapefile, tolerancia):
+    ctrl = crear_controlador(vista)
+    ctrl.cargar_archivo(shapefile)
+    ctrl.generar("codigo", None, True, tolerancia)
+    assert vista.eventos[-1][0] == "aviso"
+    assert vista.figuras == []
+
+
+def test_tolerancia_con_coma_decimal(vista, shapefile):
+    ctrl = crear_controlador(vista)
+    ctrl.cargar_archivo(shapefile)
+    ctrl.generar("codigo", None, True, "0,25")
+    assert len(vista.figuras) == 1

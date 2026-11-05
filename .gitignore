@@ -3,6 +3,7 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.2.0 | 2026-11-05 | Datos reales de prueba en tests/ (no se publican).
 #   v1.1.0 | 2026-11-05 | Añade artefactos de PyInstaller, cobertura, cachés
 #          |            | de herramientas, entorno .env, archivos de sistema
 #          |            | y notas locales (ideas.md).
@@ -39,3 +40,7 @@ Thumbs.db
 
 # Notas locales
 ideas.md
+
+# Datos reales de prueba (información catastral: no se publican)
+tests/*.gdb/
+tests/*.zip
