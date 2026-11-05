@@ -3,6 +3,7 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.1.0 | 2026-11-05 | Prueba de avisos de GitHub (> [!WARNING]).
 #   v1.0.0 | 2026-11-05 | Creación. Pruebas del parser de Markdown, del
 #          |            | servicio de ayuda (GitHub / copia local) y de su
 #          |            | controlador, sin red ni interfaz gráfica.
@@ -235,3 +236,11 @@ def test_controlador_informa_error(tmp_path):
     ControladorAyuda(vista, servicio, EjecutorSincrono()).asegurar_cargado()
     assert vista.eventos[0] == "cargando"
     assert vista.eventos[1][0] == "error"
+
+
+def test_aviso_de_github_muestra_su_titulo():
+    (cita,) = parsear("> [!WARNING]\n> Cuidado con la tolerancia.\n").bloques
+    assert isinstance(cita, Cita)
+    titulo, cuerpo = cita.contenido
+    assert texto_plano(titulo) == "⚠️ Advertencia" and titulo[0].negrita
+    assert texto_plano(cuerpo) == "Cuidado con la tolerancia."

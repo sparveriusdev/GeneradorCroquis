@@ -3,6 +3,8 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.1.0 | 2026-11-05 | Avisos de GitHub (> [!NOTE], [!WARNING]…) se
+#          |            | muestran con su título en lugar del marcador.
 #   v1.0.1 | 2026-11-05 | Las viñetas sangradas se tratan como sub-elementos.
 #   v1.0.0 | 2026-11-05 | Creación. Parser de Markdown (subconjunto GFM usado
 #          |            | en la documentación: encabezados, párrafos, listas,
@@ -158,6 +160,14 @@ _VINETA = re.compile(r"^\s*[-*+]\s+(.*)$")
 _NUMERADA = re.compile(r"^\s*(\d+)[.)]\s+(.*)$")
 _IMAGEN = re.compile(r"^!\[(?P<alt>[^\]]*)\]\((?P<src>[^)\s]+)\)\s*$")
 _SEPARADOR_TABLA = re.compile(r"^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?\s*$")
+_AVISO = re.compile(r"^\[!(\w+)\]\s*$")
+AVISOS_GITHUB = {
+    "NOTE": "ℹ️ Nota",
+    "TIP": "💡 Consejo",
+    "IMPORTANT": "❗ Importante",
+    "WARNING": "⚠️ Advertencia",
+    "CAUTION": "⛔ Precaución",
+}
 _SEPARADOR = re.compile(r"^\s*([-*_])(\s*\1){2,}\s*$")
 
 
@@ -233,6 +243,10 @@ def parsear(markdown: str) -> Documento:
             while i < len(lineas) and lineas[i].lstrip().startswith(">"):
                 cita.append(lineas[i].lstrip()[1:].strip())
                 i += 1
+            aviso = _AVISO.match(cita[0]) if cita else None
+            if aviso:  # aviso de GitHub: el marcador se reemplaza por su título en negrita
+                cita[0] = f"**{AVISOS_GITHUB.get(aviso[1].upper(), aviso[1].title())}**"
+                cita.insert(1, "")
             parrafos, actual = [], []
             for c in cita:
                 if c:

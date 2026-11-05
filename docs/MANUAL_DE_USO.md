@@ -4,6 +4,9 @@ Archivo  : docs/MANUAL_DE_USO.md
 Proyecto : Generador de Croquis
 ------------------------------------------------------------------------------
 CHANGELOG (versión interna del documento)
+  v1.3.0 | 2026-11-05 | Nueva subsección «Vértices principales y tolerancia»:
+         |            | qué son, cómo elegir la tolerancia (valores
+         |            | orientativos), riesgos y comparación visual.
   v1.2.0 | 2026-11-05 | Versión 1.1.0: acotado por vértices principales,
          |            | cotas del color de su unidad, sin solapes; nueva
          |            | opción «Acotado» y ejemplo actualizado.
@@ -146,6 +149,7 @@ inferior indica siempre qué hacer a continuación.
      entre esquinas no se acotan: el lado se mide de esquina a esquina, sumando sus tramos.
      Suba la tolerancia si aún aparecen cotas de tramos muy cortos; bájela o desactive la
      casilla para acotar vértice a vértice. Acepta coma o punto decimal (`0,15` o `0.15`).
+     Vea [Vértices principales y tolerancia](#vértices-principales-y-tolerancia).
 
    La tarjeta **Resumen de la capa** muestra el archivo, el número de polígonos y de
    construcciones, el sistema de coordenadas y las columnas, junto con los avisos (por ejemplo,
@@ -162,6 +166,46 @@ inferior indica siempre qué hacer a continuación.
 
 También puede abrir un archivo directamente desde la terminal:
 `GeneradorCroquis ruta/al/archivo.zip`.
+
+### Vértices principales y tolerancia
+
+En catastro, un polígono suele tener más vértices que esquinas: al ajustar la construcción o
+el terreno a la cartografía aparecen **vértices de ajuste** casi alineados con el lado. Si se
+acotan todos, el croquis se llena de medidas cortas que no corresponden a lados reales.
+
+Con **Acotar solo vértices principales** activado, el programa conserva solo las **esquinas
+reales** (puntos grandes) y une los tramos intermedios en un único lado, cuya medida es la
+**suma de sus tramos**. Los vértices de ajuste se siguen dibujando como puntos pequeños: la
+geometría, el área y el perímetro **no cambian**, solo qué lados se acotan.
+
+![Comparación de tolerancias](img/tolerancia_comparacion.png)
+
+**¿Qué es la tolerancia?** Es la distancia máxima, en metros, que un vértice puede apartarse de
+la recta entre las esquinas vecinas para considerarse de ajuste. Si se aparta más, es una
+esquina real y se acota.
+
+**Valores orientativos**
+
+| Tolerancia | Cuándo usarla |
+|---|---|
+| **0,05 m** | Levantamientos precisos (estación total, GNSS) en los que casi todos los vértices son esquinas reales. |
+| **0,15 m** *(por defecto)* | Catastro general: elimina los vértices de ajuste habituales y conserva quiebres desde unos 20 cm. |
+| **0,30 – 0,50 m** | Digitalizaciones irregulares (sobre ortofoto o planos escaneados) con bordes ondulados. |
+
+**Cómo ajustarla**
+
+1. Empiece con **0,15 m** y pulse **Generar croquis**.
+2. Si todavía aparecen cotas de **tramos muy cortos** que no son esquinas, súbala de
+   **0,05 en 0,05 m** y genere de nuevo.
+3. Si **desapareció un lado real corto** (un entrante, un retroceso de fachada), bájela por
+   debajo de la longitud de ese lado.
+4. Para acotar **vértice a vértice**, como en versiones anteriores, desactive la casilla.
+
+> [!WARNING]
+> Una tolerancia demasiado alta **absorbe esquinas reales**. En el ejemplo, con 1,00 m el
+> quiebre de 0,60 m desaparece y el lado superior pasa a medir 12,60 m (8,00 + 0,60 + 4,00).
+> Regla práctica: la tolerancia debe ser **menor que el lado real más corto** que quiera
+> conservar.
 
 ### La pestaña Ayuda
 

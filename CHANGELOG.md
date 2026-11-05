@@ -4,6 +4,7 @@ Archivo  : CHANGELOG.md
 Proyecto : Generador de Croquis
 ------------------------------------------------------------------------------
 CHANGELOG (versión interna del documento)
+  v1.3.1 | 2026-11-05 | Pendientes: avisos de GitHub en la Ayuda, manual.
   v1.3.0 | 2026-11-05 | Añade la versión 1.1.0 (acotado inteligente).
   v1.2.0 | 2026-11-05 | Añade la versión 1.0.2 (rediseño Material Design).
   v1.1.1 | 2026-11-05 | 1.0.1: documentación y licencia.
@@ -20,6 +21,14 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y versionado con [SemVer](https://semver.org/lang/es/).
 
 ## [Unreleased]
+
+### Añadido
+- Manual: subsección **Vértices principales y tolerancia** con valores orientativos,
+  procedimiento de ajuste y comparación visual.
+
+### Corregido
+- La pestaña Ayuda muestra los avisos de GitHub (`> [!WARNING]`, `[!NOTE]`…) con su título en
+  lugar del marcador, y sin un hueco entre el título y el texto.
 
 ## [1.1.0] - 2026-11-05
 

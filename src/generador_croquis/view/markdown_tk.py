@@ -3,6 +3,8 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.0.1 | 2026-11-05 | Párrafos de una cita separados por un solo salto
+#          |            | (los avisos de GitHub quedaban con un hueco).
 #   v1.0.0 | 2026-11-05 | Creación. Dibuja un Documento Markdown en un
 #          |            | tk.Text con estilos Material: títulos, listas,
 #          |            | tablas, citas, código, imágenes y enlaces (internos
@@ -253,7 +255,7 @@ class VisorMarkdown(ttk.Frame):
         elif isinstance(bloque, Cita):
             for i, parrafo in enumerate(bloque.contenido):
                 self._insertar_linea(parrafo, ("cita",), "cita")
-                txt.insert(tk.END, "\n" if i == len(bloque.contenido) - 1 else "\n\n", ("cita",))
+                txt.insert(tk.END, "\n", ("cita",))  # el tag ya separa los párrafos
             txt.insert(tk.END, "\n", ("hr",))
         elif isinstance(bloque, BloqueCodigo):
             txt.insert(tk.END, bloque.texto + "\n", ("codigo_bloque",))
