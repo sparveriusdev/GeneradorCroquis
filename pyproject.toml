@@ -3,6 +3,9 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.2.0 | 2026-11-05 | Licencia GPL-3.0-or-later (PEP 639) y clasificador.
+#   v1.1.0 | 2026-11-05 | Añade certifi como dependencia directa (HTTPS para
+#          |            | comprobar actualizaciones desde el ejecutable).
 #   v1.0.0 | 2026-11-05 | Configuración completa del proyecto: metadatos, versión
 #          |            | dinámica (fuente única en __init__.py), dependencias,
 #          |            | grupo dev (pytest, ruff, pyinstaller), entry points,
@@ -15,6 +18,8 @@ name = "generador-croquis"
 dynamic = ["version"]
 description = "Genera croquis técnicos acotados de construcciones a partir de Shapefile, ZIP o File Geodatabase."
 readme = "README.md"
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
 requires-python = ">=3.11,<3.14"
 authors = [
     { name = "Gabriel Gomez Baena" },
@@ -24,9 +29,11 @@ keywords = ["gis", "croquis", "shapefile", "gdb", "catastro", "geopandas"]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
+    "Natural Language :: Spanish",
     "Topic :: Scientific/Engineering :: GIS",
 ]
 dependencies = [
+    "certifi>=2024.0",
     "geopandas>=1.0",
     "matplotlib>=3.8",
     "numpy>=1.26",

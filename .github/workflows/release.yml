@@ -3,6 +3,7 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.1.0 | 2026-11-05 | Adjunta LICENSE.txt al release.
 #   v1.0.0 | 2026-11-05 | Creación. Entrega continua: al publicar un tag
 #          |            | vX.Y.Z valida que coincida con __version__, prueba,
 #          |            | construye ejecutables con PyInstaller para Windows,
@@ -133,6 +134,7 @@ jobs:
             flag {print}
           ' CHANGELOG.md > NOTAS.md
           [ -s NOTAS.md ] || echo "Versión $VERSION" > NOTAS.md
+          cp LICENSE release/LICENSE.txt
           (cd release && sha256sum * > SHA256SUMS.txt)
 
       - uses: softprops/action-gh-release@v2

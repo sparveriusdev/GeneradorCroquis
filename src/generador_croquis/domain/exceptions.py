@@ -3,6 +3,7 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.1.0 | 2026-11-05 | Añade ActualizacionError (fallos de red / GitHub).
 #   v1.0.0 | 2026-11-05 | Creación. Jerarquía de excepciones propia para
 #          |            | distinguir errores esperados (mensaje al usuario) de
 #          |            | fallos inesperados (log + traza).
@@ -28,3 +29,7 @@ class ArchivoInvalidoError(CroquisError):
 
 class CapaSinPoligonosError(CroquisError):
     """La capa seleccionada no contiene polígonos válidos."""
+
+
+class ActualizacionError(CroquisError):
+    """No se pudo consultar o descargar una versión desde GitHub."""

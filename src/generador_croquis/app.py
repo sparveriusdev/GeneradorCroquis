@@ -3,6 +3,8 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.1.0 | 2026-11-05 | Conecta la pestaña "Acerca de" (servicio de
+#          |            | actualizaciones, transporte HTTP y ejecutor Tk).
 #   v1.0.0 | 2026-11-05 | Creación. Raíz de composición: construye e inyecta
 #          |            | dependencias (lector, renderizador, servicio, vista,
 #          |            | controlador). Elimina el auto-instalador por pip de
@@ -67,11 +69,12 @@ def main(argv: list[str] | None = None) -> int:
 
         matplotlib.use("TkAgg")
 
-        from generador_croquis.controller import ControladorCroquis
-        from generador_croquis.data import LectorCapas
+        from generador_croquis.controller import ControladorAcercaDe, ControladorCroquis
+        from generador_croquis.data import LectorCapas, TransporteUrllib
         from generador_croquis.rendering import RenderizadorMatplotlib
-        from generador_croquis.services import ServicioCroquis
+        from generador_croquis.services import ServicioActualizaciones, ServicioCroquis
         from generador_croquis.view import VentanaPrincipal
+        from generador_croquis.view.ejecutor_tk import EjecutorTk
 
         config = Configuracion()
         servicio = ServicioCroquis(
@@ -83,6 +86,13 @@ def main(argv: list[str] | None = None) -> int:
         vista = VentanaPrincipal(root)
         controlador = ControladorCroquis(vista, servicio)
         vista.conectar(controlador)
+        vista.acerca_de.conectar(
+            ControladorAcercaDe(
+                vista.acerca_de,
+                ServicioActualizaciones(TransporteUrllib()),
+                EjecutorTk(root),
+            )
+        )
         if args.archivo:
             vista.ruta_archivo.set(args.archivo)
             root.after(100, controlador.cargar_archivo, args.archivo)

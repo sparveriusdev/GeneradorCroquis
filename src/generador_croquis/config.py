@@ -3,6 +3,10 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.2.0 | 2026-11-05 | Añade LICENCIA (GPL-3.0) y URL del manual de uso.
+#   v1.1.0 | 2026-11-05 | Añade repositorio de GitHub, URLs, tiempo de espera
+#          |            | de red, nombres de ejecutables por plataforma y
+#          |            | créditos de autoría.
 #   v1.0.0 | 2026-11-05 | Creación. Centraliza las constantes que estaban
 #          |            | dispersas en generador_v1.py (EPSG, umbrales, paletas,
 #          |            | candidatos de campos, rutas de log) en objetos
@@ -70,6 +74,41 @@ CANDIDATOS_CAMPO_PISOS: tuple[str, ...] = (
     "npisos",
     "npiso",
     "altura",
+)
+
+# ── GitHub / actualizaciones ────────────────────────────────────────────────
+REPO_GITHUB: str = "sparveriusdev/GeneradorCroquis"
+URL_REPOSITORIO: str = f"https://github.com/{REPO_GITHUB}"
+URL_RELEASES: str = f"{URL_REPOSITORIO}/releases"
+URL_MANUAL: str = f"{URL_REPOSITORIO}/blob/main/docs/MANUAL_DE_USO.md"
+URL_LICENCIA: str = f"{URL_REPOSITORIO}/blob/main/LICENSE"
+LICENCIA: str = "GNU GPL v3.0 o posterior"
+URL_API_ULTIMO_RELEASE: str = f"https://api.github.com/repos/{REPO_GITHUB}/releases/latest"
+TIEMPO_ESPERA_RED: float = 15.0
+
+# Sufijo del nombre del ejecutable publicado por el CI para cada plataforma
+# (debe coincidir con la matriz de .github/workflows/release.yml).
+SUFIJOS_EJECUTABLE: dict[str, str] = {
+    "win32": "windows-x64.exe",
+    "linux": "linux-x64.tar.gz",
+    "darwin": "macos-arm64.zip",
+}
+
+
+@dataclass(frozen=True)
+class Autor:
+    nombre: str
+    rol: str
+    enlace: str | None = None
+
+
+AUTORES: tuple[Autor, ...] = (
+    Autor("Gabriel Gómez Baena", "Autor de la idea original y del script base"),
+    Autor(
+        "David Vásquez",
+        "Desarrollo de las nuevas versiones (@sparveriusdev)",
+        "https://github.com/sparveriusdev",
+    ),
 )
 
 FORMATOS_EXPORTACION: tuple[tuple[str, str], ...] = (

@@ -4,6 +4,8 @@ Archivo  : README.md
 Proyecto : Generador de Croquis
 ------------------------------------------------------------------------------
 CHANGELOG (versión interna del documento)
+  v1.2.0 | 2026-11-05 | Enlaces al manual de uso, CONTRIBUTING y licencia GPL-3.0.
+  v1.1.0 | 2026-11-05 | Documenta la pestaña "Acerca de" y las actualizaciones.
   v1.0.0 | 2026-11-05 | Creación. Descripción, instalación, uso, arquitectura,
          |            | desarrollo con uv, versionado SemVer, convención de
          |            | cabeceras, proceso de release multiplataforma y créditos.
@@ -42,6 +44,9 @@ En la sección **Releases** del repositorio están los ejecutables de cada versi
 
 ## Uso
 
+> 📘 Guía completa para usuarios: **[Manual de uso](docs/MANUAL_DE_USO.md)**
+> (instalación, preparación de datos, lectura de croquis y solución de problemas).
+
 1. **Buscar archivo...** (`.zip` / `.shp`) o **Abrir GDB...** (carpeta `.gdb`).
 2. Si hay varias capas o archivos, elegir uno en el diálogo.
 3. Revisar el **campo identificador** (agrupa polígonos de la misma construcción) y el
@@ -58,7 +63,17 @@ generador-croquis --version
 
 Los errores se registran en `~/.generador_croquis/croquis.log`.
 
+### Actualizaciones (pestaña «Acerca de»)
+
+La pestaña **Acerca de** muestra la versión instalada y los créditos. **Comprobar
+actualizaciones** consulta el último release publicado en GitHub. Si hay uno más reciente,
+**Descargar vX.Y.Z** guarda el ejecutable de su sistema en la carpeta que elija; luego basta con
+cerrar la aplicación y abrir el archivo descargado. La aplicación solo se conecta a internet
+cuando se pulsa ese botón.
+
 ## Desarrollo
+
+¿Quiere contribuir? Lea **[CONTRIBUTING.md](CONTRIBUTING.md)**.
 
 Requisitos: [uv](https://docs.astral.sh/uv/) y Python 3.11 – 3.13 con tkinter.
 
@@ -97,16 +112,23 @@ src/generador_croquis/
 │   └── exceptions.py
 ├── data/                  # Acceso a datos (Strategy por formato)
 │   ├── fuentes.py         #   FuenteShapefile, FuenteGdb, FuenteZip
-│   └── lector.py          #   LectorCapas: elige la fuente adecuada
+│   ├── lector.py          #   LectorCapas: elige la fuente adecuada
+│   └── http.py            #   TransporteUrllib: API de GitHub y descargas
 ├── services/              # LÓGICA DE NEGOCIO (sin interfaz)
 │   ├── geometria.py       #   cálculo de cotas
 │   ├── deteccion_campos.py
 │   ├── preparacion.py     #   limpieza y reproyección
 │   ├── agrupacion.py      #   polígonos → construcciones
-│   └── servicio_croquis.py#   fachada de casos de uso
+│   ├── servicio_croquis.py#   fachada de casos de uso
+│   └── actualizaciones.py #   último release vs. versión instalada
 ├── rendering/             # Dibujo con matplotlib (sin pyplot)
-├── controller/            # CONTROLADOR + protocolo VistaCroquis
+├── controller/            # CONTROLADORES + protocolos de vista
+│   ├── controlador.py     #   generador de croquis
+│   └── acerca_de.py       #   pestaña «Acerca de» y actualizaciones
 └── view/                  # VISTA Tkinter (única capa que importa tkinter)
+    ├── ventana_principal.py  # pestañas «Generador» y «Acerca de»
+    ├── pestana_acerca_de.py
+    └── ejecutor_tk.py     #   tareas en segundo plano sin congelar la interfaz
 ```
 
 Cómo se aplican los principios **SOLID** y **DRY**:
@@ -166,3 +188,12 @@ En Markdown se usa el mismo bloque dentro de un comentario HTML `<!-- … -->`.
 - **Gabriel Gómez Baena**: autor de la idea original y del script base (`legacy/generador_v1.py`).
 - **David Vásquez** ([@sparveriusdev](https://github.com/sparveriusdev)): arquitectura y desarrollo
   de las nuevas versiones.
+
+## Licencia
+
+Copyright © 2026 Gabriel Gómez Baena y David Vásquez.
+
+Este programa es software libre: puede redistribuirlo y/o modificarlo bajo los términos de la
+**Licencia Pública General GNU** publicada por la Free Software Foundation, ya sea la versión 3
+de la licencia o (a su elección) cualquier versión posterior. Se distribuye con la esperanza de
+que sea útil, pero **SIN NINGUNA GARANTÍA**. Consulte el archivo [LICENSE](LICENSE).

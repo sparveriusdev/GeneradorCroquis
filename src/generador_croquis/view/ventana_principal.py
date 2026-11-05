@@ -3,6 +3,8 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.1.0 | 2026-11-05 | Organiza la ventana en pestañas (ttk.Notebook):
+#          |            | "Generador" y "Acerca de" (PestanaAcercaDe).
 #   v1.0.0 | 2026-11-05 | Creación. Vista pasiva extraída de
 #          |            | AplicacionCroquis: solo construye widgets, reenvía
 #          |            | eventos al controlador e implementa VistaCroquis.
@@ -21,6 +23,7 @@ from generador_croquis import __app_name__, __version__
 from generador_croquis.config import FORMATOS_EXPORTACION, OPCION_NINGUNO
 from generador_croquis.view.dialogos import DialogoSeleccion, VentanaFigura
 from generador_croquis.view.estilos import FUENTE, FUENTE_MONO, aplicar_estilos, centrar
+from generador_croquis.view.pestana_acerca_de import PestanaAcercaDe
 
 if TYPE_CHECKING:
     from matplotlib.figure import Figure
@@ -39,7 +42,7 @@ class VentanaPrincipal:
         self.root.title(f"{__app_name__} v{__version__}")
         self.root.minsize(640, 560)
         aplicar_estilos(root)
-        centrar(root, 780, 680)
+        centrar(root, 800, 740)
 
         self.ruta_archivo = tk.StringVar()
         self.campo_id = tk.StringVar()
@@ -53,8 +56,12 @@ class VentanaPrincipal:
     # ── construcción de widgets ──────────────────────────────────────────────
 
     def _construir(self) -> None:
-        main = ttk.Frame(self.root, padding=20)
-        main.pack(fill=tk.BOTH, expand=True)
+        self.pestanas = ttk.Notebook(self.root)
+        self.pestanas.pack(fill=tk.BOTH, expand=True, padx=8, pady=8)
+        main = ttk.Frame(self.pestanas, padding=20)
+        self.pestanas.add(main, text="  Generador  ")
+        self.acerca_de = PestanaAcercaDe(self.pestanas)
+        self.pestanas.add(self.acerca_de, text="  Acerca de  ")
 
         ttk.Label(main, text=__app_name__, style="Title.TLabel").pack(pady=(0, 2))
         ttk.Label(

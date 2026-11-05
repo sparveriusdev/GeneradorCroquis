@@ -3,6 +3,8 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.1.0 | 2026-11-05 | Añade InfoRelease, Descarga y ResultadoActualizacion
+#          |            | para la comprobación de nuevas versiones.
 #   v1.0.0 | 2026-11-05 | Creación. Modelo de datos explícito (Cota,
 #          |            | Construccion, CapaCargada, ResumenCapa,
 #          |            | SeleccionCampos) que reemplaza los diccionarios y
@@ -18,6 +20,8 @@ from typing import TYPE_CHECKING
 
 from shapely.geometry import MultiPolygon, Polygon
 from shapely.ops import unary_union
+
+from generador_croquis.domain.version import Version
 
 if TYPE_CHECKING:
     import geopandas as gpd
@@ -124,3 +128,34 @@ class ResumenCapa:
         else:
             lineas.append(f"Construcciones: {capa.num_poligonos} (sin agrupar)")
         return "\n".join(lineas)
+
+
+@dataclass(frozen=True)
+class Descarga:
+    """Archivo descargable de un release (ejecutable de una plataforma)."""
+
+    nombre: str
+    url: str
+    tamano: int
+
+
+@dataclass(frozen=True)
+class InfoRelease:
+    """Release publicado en GitHub."""
+
+    version: Version
+    url_pagina: str
+    notas: str = ""
+    descarga: Descarga | None = None
+
+
+@dataclass(frozen=True)
+class ResultadoActualizacion:
+    """Resultado de comparar la versión instalada con el último release."""
+
+    actual: Version
+    ultimo: InfoRelease
+
+    @property
+    def hay_nueva(self) -> bool:
+        return self.ultimo.version > self.actual
