@@ -4,6 +4,8 @@ Archivo  : docs/MANUAL_DE_USO.md
 Proyecto : Generador de Croquis
 ------------------------------------------------------------------------------
 CHANGELOG (versión interna del documento)
+  v1.5.0 | 2026-11-05 | Opción «El campo indica» (piso de la unidad / total
+         |            | de pisos) y etiqueta pequeña del identificador.
   v1.4.0 | 2026-11-05 | Versión 1.2.0: convenciones por piso, unidades
          |            | superpuestas discontinuas, cota común gris, ejes
          |            | con decimales automáticos.
@@ -146,10 +148,18 @@ inferior indica siempre qué hacer a continuación.
    **Detectado automáticamente**. Cámbielos si no son los correctos:
    - *Identificador de la construcción*: los polígonos con el mismo valor se dibujan juntos.
      Con `(ninguno)` se dibuja un croquis por cada polígono.
-   - *Número de pisos*: opcional; con `(ninguno)` los croquis no muestran pisos. Si la capa
-     tiene **una unidad por piso** (por ejemplo, unidades de construcción LADM-COL), elija el
-     campo que indica **en qué piso está cada unidad** (p. ej. `PLANTA_UBICACION`): con él se
-     ordenan y colorean los pisos y se arma la leyenda de convenciones.
+   - *Pisos*: opcional; con `(ninguno)` los croquis no muestran pisos. Debajo, **El campo
+     indica** dice qué significa ese campo. Se elige solo por el nombre, y puede cambiarse:
+
+     | Opción | Ejemplo de campo | Resultado |
+     |---|---|---|
+     | **Piso de la unidad** | `PLANTA_UBICACION`, `nivel`, `piso` | Cada unidad con el color de su piso (piso 1 azul, piso 2 verde…), leyenda de convenciones **aunque el croquis tenga una sola unidad** y título «Piso 2» o «Pisos 1, 2». |
+     | **Total de pisos** | `NUMERO_PISOS`, `pisos`, `niveles` | El total se muestra en el título («3 pisos»); los colores siguen el orden de las unidades. |
+
+     En capas LADM-COL de unidades de construcción, use `PLANTA_UBICACION` con **Piso de la
+     unidad**. Para ver juntas todas las unidades de una construcción, agrupe por un código
+     que compartan (p. ej. `CODIGO_UNIDAD_CONSTRUCCION`); si agrupa por `IDENTIFICADOR`, cada
+     unidad sale en su propio croquis, con su piso y su leyenda.
    - *Acotado*: con **Acotar solo vértices principales** activado (recomendado), los vértices
      de ajuste que se apartan menos que la **tolerancia** (0,15 m por defecto) de la recta
      entre esquinas no se acotan: el lado se mide de esquina a esquina, sumando sus tramos.
@@ -227,8 +237,8 @@ navegador.
 
 | Elemento | Significado |
 |---|---|
-| Título `Construcción: X  \|  N pisos  \|  M partes` | Identificador, pisos y número de polígonos que la forman. |
-| Recuadro naranja | Identificador y pisos, dentro de la construcción. |
+| Título `Construcción: X  \|  3 pisos  \|  M partes` | Identificador, pisos («3 pisos» si el campo es el total; «Piso 2» o «Pisos 1, 2» si es el piso de cada unidad) y número de polígonos que la forman. |
+| Etiqueta naranja pequeña | Identificador y pisos, dentro de la construcción. Los códigos largos se parten en varias líneas; el código completo está en el título. |
 | Cotas (`10.00 m`) | Longitud de cada lado del contorno exterior entre vértices principales, en metros, con dos decimales. Si el lado tiene vértices de ajuste, es la **suma de sus tramos**. |
 | Color de la cota | El mismo de la unidad a la que pertenece el lado. Cada piso tiene siempre el mismo color: piso 1 azul, piso 2 verde, piso 3 rojo, piso 4 morado… |
 | Cota gris | Lado común a varias unidades con la misma medida: se acota una sola vez. |
@@ -236,7 +246,7 @@ navegador.
 | Línea punteada | Hueco interior (patio o vacío). Sus lados no se acotan. |
 | Puntos grandes | Vértices principales (esquinas reales). |
 | Puntos pequeños | Vértices de ajuste: forman parte del polígono, pero no se acotan. |
-| Recuadro «Convenciones» | Aparece cuando la construcción tiene 2 o más unidades: color y estilo de línea de cada piso, con su área, y la cota común. |
+| Recuadro «Convenciones» | Color y estilo de línea de cada piso, con su área, y la cota común. Aparece cuando la construcción tiene 2 o más unidades, o siempre si el campo de pisos indica el **piso de la unidad**. |
 | Línea continua gruesa con relleno | Unidad del piso más bajo (o unidad que no está encima de otra). |
 | Línea fina discontinua, sin relleno | Unidad que está **encima** de otra de un piso inferior. Si varios pisos coinciden en un borde, sus trazos se alternan para que se vean todos. |
 | Pie del croquis | Área total (m²) y perímetro total (m), sumando todas las partes. |

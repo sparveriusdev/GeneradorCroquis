@@ -3,6 +3,8 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.2.0 | 2026-11-05 | Una tabla sangrada dentro de una lista se dibuja
+#          |            | como tabla (antes se pegaba al texto de la viñeta).
 #   v1.1.0 | 2026-11-05 | Avisos de GitHub (> [!NOTE], [!WARNING]…) se
 #          |            | muestran con su título en lugar del marcador.
 #   v1.0.1 | 2026-11-05 | Las viñetas sangradas se tratan como sub-elementos.
@@ -267,6 +269,8 @@ def parsear(markdown: str) -> Documento:
                 actual = lineas[i]
                 sangrado = actual.startswith((" ", "\t")) and bool(elementos)
                 m = _NUMERADA.match(actual) if ordenada else _VINETA.match(actual)
+                if sangrado and actual.lstrip().startswith("|"):
+                    break  # tabla dentro de un elemento: se dibuja como tabla propia
                 if m and not sangrado:
                     elementos.append(m[m.lastindex])
                 elif actual.strip() and sangrado:

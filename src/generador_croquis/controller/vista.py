@@ -3,6 +3,7 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.2.0 | 2026-11-05 | mostrar_significado_pisos (piso de la unidad / total).
 #   v1.1.0 | 2026-11-05 | mostrar_info -> mostrar_estado (barra de estado) y
 #          |            | nuevo mostrar_resumen (tabla de datos de la capa).
 #   v1.0.0 | 2026-11-05 | Creación. Contrato que debe cumplir cualquier vista
@@ -18,6 +19,8 @@ from typing import TYPE_CHECKING, Protocol
 
 if TYPE_CHECKING:
     from matplotlib.figure import Figure
+
+    from generador_croquis.domain.models import SignificadoPisos
 
 
 class VistaCroquis(Protocol):
@@ -46,6 +49,10 @@ class VistaCroquis(Protocol):
         campo_pisos: str | None,
         nota_id: str,
         nota_pisos: str,
+    ) -> None: ...
+
+    def mostrar_significado_pisos(
+        self, significado: SignificadoPisos, habilitado: bool
     ) -> None: ...
 
     def habilitar_generar(self, habilitado: bool) -> None: ...

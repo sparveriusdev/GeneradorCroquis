@@ -3,6 +3,7 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v2.2.0 | 2026-11-05 | Estilo de opción excluyente (Card.TRadiobutton).
 #   v2.1.0 | 2026-11-05 | Estilos para casilla (Card.TCheckbutton) y campo
 #          |            | numérico (TSpinbox) con contorno.
 #   v2.0.0 | 2026-11-05 | Reescritura: tema Material Design 3 para ttk.
@@ -373,6 +374,25 @@ class TemaMaterial:
         s.map(
             "Card.TCheckbutton",
             background=[("active", c.surface_container_lowest)],
+            indicatorbackground=[("selected", c.primary), ("active", c.primary_container)],
+            indicatorforeground=[("selected", c.on_primary)],
+        )
+
+        # Opción excluyente sobre tarjeta (mismo lenguaje que la casilla)
+        s.configure(
+            "Card.TRadiobutton",
+            background=c.surface_container_lowest,
+            foreground=c.on_surface,
+            font=t.body_medium,
+            indicatorbackground=c.surface_container_lowest,
+            indicatorforeground=c.primary,
+            indicatormargin=(0, 0, 6, 0),
+            focuscolor=c.surface_container_lowest,
+        )
+        s.map(
+            "Card.TRadiobutton",
+            background=[("active", c.surface_container_lowest)],
+            foreground=[("disabled", c.disabled_content)],
             indicatorbackground=[("selected", c.primary), ("active", c.primary_container)],
             indicatorforeground=[("selected", c.on_primary)],
         )

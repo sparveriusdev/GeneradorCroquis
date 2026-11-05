@@ -3,6 +3,7 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.3.0 | 2026-11-05 | Significado del campo de pisos (detección y envío).
 #   v1.2.0 | 2026-11-05 | Prueba de la tolerancia de acotado (coma decimal
 #          |            | y valores inválidos).
 #   v1.1.0 | 2026-11-05 | Adapta la vista falsa a mostrar_estado/mostrar_resumen.
@@ -56,6 +57,9 @@ class VistaFalsa:
 
     def configurar_campos(self, campos, campo_id, campo_pisos, nota_id, nota_pisos):
         self.eventos.append(("campos", campo_id, campo_pisos, nota_id))
+
+    def mostrar_significado_pisos(self, significado, habilitado):
+        self.eventos.append(("significado", significado.value, habilitado))
 
     def habilitar_generar(self, habilitado):
         self.generar_habilitado = habilitado
@@ -141,4 +145,21 @@ def test_tolerancia_con_coma_decimal(vista, shapefile):
     ctrl = crear_controlador(vista)
     ctrl.cargar_archivo(shapefile)
     ctrl.generar("codigo", None, True, "0,25")
+    assert len(vista.figuras) == 1
+
+
+def test_significado_de_pisos_se_detecta_al_cargar_y_al_cambiar(vista, shapefile):
+    ctrl = crear_controlador(vista)
+    ctrl.cargar_archivo(shapefile)  # campo sugerido: num_pisos → total
+    assert ("significado", "total", True) in vista.eventos
+    ctrl.cambiar_campo_pisos("PLANTA_UBICACION")
+    assert vista.eventos[-1] == ("significado", "ubicacion", True)
+    ctrl.cambiar_campo_pisos("(ninguno)")
+    assert vista.eventos[-1] == ("significado", "total", False)
+
+
+def test_generar_con_piso_de_la_unidad(vista, shapefile):
+    ctrl = crear_controlador(vista)
+    ctrl.cargar_archivo(shapefile)
+    ctrl.generar("codigo", "num_pisos", True, "0.15", "ubicacion")
     assert len(vista.figuras) == 1

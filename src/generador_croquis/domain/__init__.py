@@ -3,6 +3,7 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.4.0 | 2026-11-05 | Exporta SignificadoPisos.
 #   v1.3.0 | 2026-11-05 | Exporta GrupoPiso.
 #   v1.2.0 | 2026-11-05 | Exporta Lado, OpcionesAcotado y OpcionInvalidaError
 #          |            | (Cota se elimina).
@@ -32,6 +33,7 @@ from generador_croquis.domain.models import (
     ResultadoActualizacion,
     ResumenCapa,
     SeleccionCampos,
+    SignificadoPisos,
 )
 from generador_croquis.domain.version import Version
 
@@ -53,5 +55,6 @@ __all__ = [
     "ResultadoActualizacion",
     "ResumenCapa",
     "SeleccionCampos",
+    "SignificadoPisos",
     "Version",
 ]

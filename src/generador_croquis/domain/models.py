@@ -3,6 +3,9 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.5.0 | 2026-11-05 | SignificadoPisos (piso de la unidad / total de
+#          |            | pisos) en SeleccionCampos, Construccion y GrupoPiso:
+#          |            | textos «Piso 2» o «2 pisos» según el caso.
 #   v1.4.0 | 2026-11-05 | Construccion guarda el piso de cada parte
 #          |            | (pisos_partes) y agrupa las partes por piso para la
 #          |            | leyenda (GrupoPiso).
@@ -26,6 +29,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from enum import StrEnum
 from functools import cached_property
 from typing import TYPE_CHECKING
 
@@ -41,6 +45,19 @@ if TYPE_CHECKING:
     from shapely.geometry.base import BaseGeometry
 
 Punto = tuple[float, float]
+
+
+class SignificadoPisos(StrEnum):
+    """Qué indica el campo de pisos de cada polígono."""
+
+    UBICACION = "ubicacion"  # piso donde está la unidad (p. ej. PLANTA_UBICACION)
+    TOTAL = "total"  # número total de pisos de la construcción (p. ej. NUMERO_PISOS)
+
+
+def _texto_pisos(valor: int, significado: SignificadoPisos) -> str:
+    if significado is SignificadoPisos.UBICACION:
+        return f"Piso {valor}"
+    return f"{valor} piso{'s' if valor != 1 else ''}"
 
 
 @dataclass(frozen=True)
@@ -105,6 +122,14 @@ class Construccion:
     pisos: int | None = None
     # Piso de cada parte (mismo orden que ``partes``); vacío si no se conoce.
     pisos_partes: tuple[int | None, ...] = ()
+    significado_pisos: SignificadoPisos = SignificadoPisos.TOTAL
+
+    @property
+    def pisos_por_ubicacion(self) -> bool:
+        """True si los pisos indican en qué nivel está cada unidad (color y leyenda por piso)."""
+        return self.significado_pisos is SignificadoPisos.UBICACION and any(
+            p is not None for p in self.pisos_partes
+        )
 
     def __post_init__(self) -> None:
         if self.pisos_partes and len(self.pisos_partes) != len(self.partes):
@@ -132,7 +157,11 @@ class Construccion:
         orden = sorted(grupos, key=lambda p: (p is None, p if p is not None else 0))
         return [
             GrupoPiso(
-                piso, tuple(grupos[piso]), sum(self.partes[i].area for i in grupos[piso]), n + 1
+                piso,
+                tuple(grupos[piso]),
+                sum(self.partes[i].area for i in grupos[piso]),
+                n + 1,
+                self.significado_pisos,
             )
             for n, piso in enumerate(orden)
         ]
@@ -151,9 +180,15 @@ class Construccion:
 
     @property
     def descripcion_pisos(self) -> str | None:
+        """«3 pisos» (total) o «Piso 2» / «Pisos 1, 2» (ubicación de las unidades)."""
         if self.pisos is None:
             return None
-        return f"{self.pisos} piso{'s' if self.pisos != 1 else ''}"
+        if not self.pisos_por_ubicacion:
+            return _texto_pisos(self.pisos, SignificadoPisos.TOTAL)
+        niveles = sorted({p for p in self.pisos_partes if p is not None})
+        if len(niveles) == 1:
+            return _texto_pisos(niveles[0], SignificadoPisos.UBICACION)
+        return "Pisos " + ", ".join(str(n) for n in niveles)
 
 
 @dataclass(frozen=True)
@@ -164,10 +199,14 @@ class GrupoPiso:
     indices: tuple[int, ...]
     area: float
     orden: int  # posición 1, 2, 3… de abajo hacia arriba
+    significado: SignificadoPisos = SignificadoPisos.UBICACION
 
     @property
     def etiqueta(self) -> str:
-        nombre = f"Piso {self.piso}" if self.piso is not None else f"Unidad {self.orden}"
+        if self.piso is None:
+            nombre = f"Unidad {self.orden}"
+        else:
+            nombre = _texto_pisos(self.piso, self.significado)
         unidades = f" ({len(self.indices)} unidades)" if len(self.indices) > 1 else ""
         return f"{nombre} · {self.area:.2f} m²{unidades}"
 
@@ -178,6 +217,7 @@ class SeleccionCampos:
 
     campo_id: str | None = None
     campo_pisos: str | None = None
+    significado_pisos: SignificadoPisos = SignificadoPisos.TOTAL
 
 
 @dataclass(frozen=True)

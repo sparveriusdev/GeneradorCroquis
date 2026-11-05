@@ -3,6 +3,8 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.3.0 | 2026-11-05 | Significado de pisos (ubicación / total), leyenda con
+#          |            | una sola unidad, etiqueta abreviada, detección.
 #   v1.2.0 | 2026-11-05 | Convenciones por piso, colores fijos por piso,
 #          |            | unidades superpuestas discontinuas, cota común gris,
 #          |            | decimales automáticos en los ejes.
@@ -19,11 +21,14 @@ import pytest
 from shapely.geometry import Polygon, box
 
 from generador_croquis.config import TemaCroquis
-from generador_croquis.domain import Construccion, OpcionesAcotado
+from generador_croquis.domain import Construccion, OpcionesAcotado, SignificadoPisos
 from generador_croquis.rendering import RenderizadorMatplotlib
 from generador_croquis.rendering.coordenadas import decimales_necesarios
+from generador_croquis.rendering.renderizador import partir
+from generador_croquis.services import detectar_significado_pisos
 
 TEMA = TemaCroquis()
+UBIC = SignificadoPisos.UBICACION
 # Unidad 1 (piso 1) con vértices de ajuste y unidad 2 (piso 2) superpuesta a la izquierda,
 # que comparte con la 1 el lado izquierdo completo (8,60 m).
 UNIDAD_1 = Polygon(
@@ -139,7 +144,13 @@ def test_sin_convenciones_con_una_sola_unidad():
 
 
 def test_convenciones_por_piso_con_area():
-    c = Construccion("A", (PLANTA, PLANTA, box(0, 0, 6, 8)), pisos=3, pisos_partes=(1, 2, 3))
+    c = Construccion(
+        "A",
+        (PLANTA, PLANTA, box(0, 0, 6, 8)),
+        pisos=3,
+        pisos_partes=(1, 2, 3),
+        significado_pisos=UBIC,
+    )
     _, figura = renderizar(c)
     assert leyenda(figura) == [
         "Piso 1 · 96.00 m²",
@@ -161,7 +172,9 @@ def test_convenciones_sin_campo_de_pisos():
 
 def test_color_fijo_por_piso():
     """El piso 2 usa el segundo color aunque sea la única unidad dibujada con el piso 3."""
-    c = Construccion("A", (PLANTA, box(0, 0, 6, 8)), pisos=3, pisos_partes=(2, 3))
+    c = Construccion(
+        "A", (PLANTA, box(0, 0, 6, 8)), pisos=3, pisos_partes=(2, 3), significado_pisos=UBIC
+    )
     _, figura = renderizar(c)
     bordes = {
         linea.get_color() for linea in figura.axes[0].get_lines() if linea.get_linewidth() > 1
@@ -200,3 +213,51 @@ def test_agrupacion_ordena_partes_de_abajo_hacia_arriba():
 def test_una_sola_unidad_usa_el_primer_color_aunque_tenga_tres_pisos():
     _, figura = renderizar(Construccion("A", (PLANTA,), pisos=3, pisos_partes=(3,)))
     assert {t.get_color() for t in cotas_de(figura)} == {TEMA.paleta_borde[0]}
+
+
+def test_una_unidad_con_piso_de_la_unidad_lleva_color_y_leyenda_de_su_piso():
+    c = Construccion("U-2", (PLANTA,), pisos=2, pisos_partes=(2,), significado_pisos=UBIC)
+    _, figura = renderizar(c)
+    assert {t.get_color() for t in cotas_de(figura)} == {TEMA.paleta_borde[1]}  # piso 2: verde
+    assert leyenda(figura) == ["Piso 2 · 96.00 m²"]
+    assert "Piso 2" in figura.axes[0].get_title()
+
+
+def test_total_de_pisos_en_titulo_y_sin_leyenda():
+    c = Construccion("A", (PLANTA,), pisos=3, pisos_partes=(3,))
+    _, figura = renderizar(c)
+    assert leyenda(figura) is None
+    assert "3 pisos" in figura.axes[0].get_title()
+
+
+def test_titulo_con_varios_pisos_de_unidad():
+    c = Construccion("A", (PLANTA, PLANTA), pisos=2, pisos_partes=(1, 2), significado_pisos=UBIC)
+    assert c.descripcion_pisos == "Pisos 1, 2"
+
+
+@pytest.mark.parametrize(
+    ("campo", "esperado"),
+    [
+        ("PLANTA_UBICACION", "ubicacion"),
+        ("NUMERO_PISOS", "total"),
+        ("nivel", "ubicacion"),
+        ("NIVELES", "total"),
+        ("piso", "ubicacion"),
+        ("pisos", "total"),
+        ("altura", "total"),
+        (None, "total"),
+    ],
+)
+def test_detectar_significado_pisos(campo, esperado):
+    assert detectar_significado_pisos(campo).value == esperado
+
+
+@pytest.mark.parametrize(
+    ("texto", "esperado"),
+    [
+        ("C-01", "C-01"),
+        ("057360100001200060005000000000", "057360100001200\n060005000000000"),
+    ],
+)
+def test_codigos_largos_se_parten_sin_perder_digitos(texto, esperado):
+    assert partir(texto, 15) == esperado

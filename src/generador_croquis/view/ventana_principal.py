@@ -3,6 +3,8 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v2.2.0 | 2026-11-05 | Opción «El campo indica: piso de la unidad / total
+#          |            | de pisos», propuesta al elegir el campo de pisos.
 #   v2.1.0 | 2026-11-05 | Página Generador desplazable (pantallas bajas); el
 #          |            | resumen sigue al campo identificador elegido.
 #          |            | Sección «Acotado» en la tarjeta de campos: casilla
@@ -41,6 +43,7 @@ from generador_croquis.config import (
     TOLERANCIA_MAXIMA,
     TOLERANCIA_PRINCIPALES,
 )
+from generador_croquis.domain.models import SignificadoPisos
 from generador_croquis.view.componentes import (
     BarraNavegacion,
     CampoSeleccion,
@@ -97,6 +100,7 @@ class VentanaPrincipal:
         self.ruta_archivo = tk.StringVar(value=SIN_ARCHIVO)
         self.campo_id = tk.StringVar()
         self.campo_pisos = tk.StringVar()
+        self.significado_pisos = tk.StringVar(value=SignificadoPisos.TOTAL.value)
         self.solo_principales = tk.BooleanVar(value=True)
         self.tolerancia = tk.StringVar(value=f"{TOLERANCIA_PRINCIPALES:.2f}")
         self.estado = tk.StringVar()
@@ -205,13 +209,15 @@ class VentanaPrincipal:
         self.selector_id.combo.bind("<<ComboboxSelected>>", self._al_cambiar_agrupacion)
         self.selector_pisos = CampoSeleccion(
             campos.cuerpo,
-            "Número de pisos",
-            "Se muestra en la etiqueta de cada croquis. Si las partes difieren, se usa el "
-            "valor más alto.",
+            "Pisos",
+            "Piso de la unidad (p. ej. PLANTA_UBICACION): cada piso con su color y leyenda. "
+            "Total de pisos (p. ej. NUMERO_PISOS): se muestra en el título.",
             self.campo_pisos,
         )
         self.selector_pisos.grid(row=1, column=0, sticky="ew")
-        self._seccion_acotado(campos.cuerpo).grid(row=2, column=0, sticky="ew", pady=(12, 0))
+        self.selector_pisos.combo.bind("<<ComboboxSelected>>", self._al_cambiar_campo_pisos)
+        self._fila_significado(campos.cuerpo).grid(row=2, column=0, sticky="ew", pady=(6, 0))
+        self._seccion_acotado(campos.cuerpo).grid(row=3, column=0, sticky="ew", pady=(12, 0))
 
         # Resumen
         resumen = Tarjeta(pagina, "Resumen de la capa")
@@ -244,6 +250,33 @@ class VentanaPrincipal:
         )
         self.btn_generar.pack(side=tk.RIGHT, padx=(0, 10))
         return desplazable
+
+    def _fila_significado(self, parent: ttk.Frame) -> ttk.Frame:
+        fila = ttk.Frame(parent, style="CardInner.TFrame")
+        ttk.Label(fila, text="El campo indica:", style="CardBody.TLabel").pack(
+            side=tk.LEFT, padx=(0, 10)
+        )
+        self._opciones_significado = [
+            ttk.Radiobutton(
+                fila,
+                text=texto,
+                value=valor.value,
+                variable=self.significado_pisos,
+                style="Card.TRadiobutton",
+            )
+            for texto, valor in (
+                ("Piso de la unidad", SignificadoPisos.UBICACION),
+                ("Total de pisos", SignificadoPisos.TOTAL),
+            )
+        ]
+        for opcion in self._opciones_significado:
+            opcion.pack(side=tk.LEFT, padx=(0, 14))
+            opcion.state(["disabled"])
+        return fila
+
+    def _al_cambiar_campo_pisos(self, _evento: tk.Event | None = None) -> None:
+        if self._controlador:
+            self._controlador.cambiar_campo_pisos(self.campo_pisos.get())
 
     def _seccion_acotado(self, parent: ttk.Frame) -> ttk.Frame:
         marco = ttk.Frame(parent, style="CardInner.TFrame")
@@ -326,6 +359,7 @@ class VentanaPrincipal:
                 self.campo_pisos.get(),
                 self.solo_principales.get(),
                 self.tolerancia.get(),
+                self.significado_pisos.get(),
             )
 
     def _guardar(self) -> None:
@@ -384,6 +418,11 @@ class VentanaPrincipal:
         self.selector_pisos.configurar(valores, nota_pisos, campo_pisos is not None)
         self.campo_id.set(campo_id or OPCION_NINGUNO)
         self.campo_pisos.set(campo_pisos or OPCION_NINGUNO)
+
+    def mostrar_significado_pisos(self, significado: SignificadoPisos, habilitado: bool) -> None:
+        self.significado_pisos.set(significado.value)
+        for opcion in self._opciones_significado:
+            opcion.state(["!disabled"] if habilitado else ["disabled"])
 
     def habilitar_generar(self, habilitado: bool) -> None:
         self.btn_generar["state"] = "normal" if habilitado else "disabled"

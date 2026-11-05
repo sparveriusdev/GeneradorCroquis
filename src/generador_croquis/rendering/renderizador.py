@@ -3,6 +3,10 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v2.3.0 | 2026-11-05 | Según el significado del campo de pisos: con «piso
+#          |            | de la unidad», color por piso y leyenda aunque haya
+#          |            | una sola unidad. Etiqueta del identificador pequeña,
+#          |            | semitransparente y con códigos largos en varias líneas.
 #   v2.2.0 | 2026-11-05 | Convenciones (leyenda) por piso con área; color fijo
 #          |            | por piso; unidades superpuestas con línea fina y
 #          |            | discontinua sin relleno (la de abajo sigue visible);
@@ -71,6 +75,15 @@ class Renderizador(Protocol):
 class _CotaPendiente:
     lado: Lado
     color: str
+
+
+def partir(texto: str, maximo: int) -> str:
+    """Parte códigos largos en líneas de ``maximo`` caracteres sin perder ninguno.
+
+    No se abrevia: en códigos catastrales la parte que distingue unidades suele estar
+    en el medio (``0573601…0000000`` sería igual para varias unidades).
+    """
+    return "\n".join(texto[i : i + maximo] for i in range(0, len(texto), maximo)) or texto
 
 
 def _solapa(a, b, minimo: float = 0.01) -> bool:
@@ -179,7 +192,7 @@ class RenderizadorMatplotlib:
                     cotas.append(_CotaPendiente(lado, borde))
                 elif comun.color != borde:  # lado de varias unidades: una cota, color neutro
                     comun.color = t.color_cota_comun
-        if c.num_partes > 1:
+        if c.num_partes > 1 or c.pisos_por_ubicacion:
             self._dibujar_convenciones(ax, c, colores, estilos, cotas)
         etiqueta = self._dibujar_etiqueta(ax, c)
         self._configurar_ejes(ax, c)
@@ -192,11 +205,12 @@ class RenderizadorMatplotlib:
         total de pisos (p. ej. NUMERO_PISOS) y no el piso donde está la unidad.
         """
         t = self._tema
-        if c.num_partes == 1:  # una sola unidad: siempre el primer color, sin importar el piso
-            return [(t.paleta_borde[0], t.paleta_relleno[0])]
         colores: list[tuple[str, str]] = [("", "")] * c.num_partes
         for grupo in c.grupos_por_piso():
-            indice = (grupo.piso - 1) if grupo.piso is not None else (grupo.orden - 1)
+            # Piso de la unidad: color fijo por nivel (piso 1 azul, piso 2 verde…).
+            # Total de pisos o sin pisos: colores por orden (una sola unidad, el primero).
+            por_piso = c.pisos_por_ubicacion and grupo.piso is not None
+            indice = (grupo.piso - 1) if por_piso else (grupo.orden - 1)
             par = (
                 t.paleta_borde[indice % len(t.paleta_borde)],
                 t.paleta_relleno[indice % len(t.paleta_relleno)],
@@ -347,24 +361,28 @@ class RenderizadorMatplotlib:
         return texto
 
     def _dibujar_etiqueta(self, ax: Axes, c: Construccion) -> Text:
+        """Etiqueta discreta en el interior: el texto completo ya está en el título."""
         t = self._tema
         punto = c.union.representative_point()  # siempre dentro de la figura
-        texto = c.identificador + (f"\n{c.descripcion_pisos}" if c.pisos is not None else "")
+        texto = partir(c.identificador, t.largo_maximo_etiqueta)
+        if c.pisos is not None:
+            texto += f"\n{c.descripcion_pisos}"
         etiqueta = ax.text(
             punto.x,
             punto.y,
             texto,
             ha="center",
             va="center",
-            fontsize=9,
+            fontsize=t.tamano_fuente_etiqueta,
             fontweight="bold",
             color=t.color_titulo,
+            alpha=0.85,
             bbox={
-                "boxstyle": "round,pad=0.3",
+                "boxstyle": "round,pad=0.25",
                 "facecolor": t.color_etiqueta_fondo,
                 "edgecolor": t.color_etiqueta_borde,
-                "alpha": 0.85,
-                "linewidth": 1,
+                "alpha": 0.55,
+                "linewidth": 0.6,
             },
             zorder=7,
         )

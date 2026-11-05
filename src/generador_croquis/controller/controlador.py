@@ -3,6 +3,9 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.3.0 | 2026-11-05 | Significado del campo de pisos: se detecta al cargar
+#          |            | y al cambiar el campo (cambiar_campo_pisos) y llega
+#          |            | a generar().
 #   v1.2.0 | 2026-11-05 | cambiar_agrupacion(): el resumen sigue al campo
 #          |            | elegido. generar() recibe las opciones de acotado (solo
 #          |            | vértices principales y tolerancia, con coma o punto
@@ -37,7 +40,9 @@ from generador_croquis.domain.models import (
     OpcionesAcotado,
     ResumenCapa,
     SeleccionCampos,
+    SignificadoPisos,
 )
+from generador_croquis.services.deteccion_campos import detectar_significado_pisos
 from generador_croquis.services.servicio_croquis import ServicioCroquis
 
 if TYPE_CHECKING:
@@ -104,12 +109,18 @@ class ControladorCroquis:
             filas = self.estado.resumen.filas(_normalizar_campo(campo_id), usar_sugerido=False)
             self._vista.mostrar_resumen(filas, list(self.estado.resumen.capa.avisos))
 
+    def cambiar_campo_pisos(self, campo_pisos: str | None) -> None:
+        """Propone el significado del campo de pisos según su nombre."""
+        campo = _normalizar_campo(campo_pisos)
+        self._vista.mostrar_significado_pisos(detectar_significado_pisos(campo), campo is not None)
+
     def generar(
         self,
         campo_id: str | None,
         campo_pisos: str | None,
         solo_principales: bool = True,
         tolerancia: str | float = TOLERANCIA_PRINCIPALES,
+        significado_pisos: str | SignificadoPisos = SignificadoPisos.TOTAL,
     ) -> None:
         capa = self.estado.capa
         if capa is None:
@@ -121,7 +132,11 @@ class ControladorCroquis:
             self._vista.mostrar_aviso("Tolerancia no válida", str(exc))
             return
 
-        seleccion = SeleccionCampos(_normalizar_campo(campo_id), _normalizar_campo(campo_pisos))
+        seleccion = SeleccionCampos(
+            _normalizar_campo(campo_id),
+            _normalizar_campo(campo_pisos),
+            SignificadoPisos(significado_pisos),
+        )
         n = self._servicio.requiere_confirmacion(capa, seleccion)
         if n is not None and not self._vista.confirmar(
             "Muchas construcciones",
@@ -183,6 +198,7 @@ class ControladorCroquis:
         nota_id = "Detectado automáticamente" if id_sug else "Elíjalo manualmente"
         nota_pisos = "Detectado automáticamente" if pisos_sug else "Opcional"
         self._vista.configurar_campos(capa.campos, id_sug, pisos_sug, nota_id, nota_pisos)
+        self.cambiar_campo_pisos(pisos_sug)
         self._vista.mostrar_resumen(resumen.filas(), list(capa.avisos))
         self._vista.habilitar_generar(True)
         self._vista.mostrar_estado(

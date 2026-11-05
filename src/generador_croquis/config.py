@@ -3,6 +3,8 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.6.0 | 2026-11-05 | Tamaño y largo máximo de la etiqueta del ID;
+#          |            | etiqueta de fondo más suave.
 #   v1.5.0 | 2026-11-05 | Decimales automáticos (máximo 4), estilo de las
 #          |            | unidades superpuestas y color de la cota común.
 #   v1.4.1 | 2026-11-05 | Decimales y número de marcas de los ejes.
@@ -203,6 +205,8 @@ class TemaCroquis:
     color_cota_comun: str = "#424242"
     tamano_vertice_intermedio: float = 2.0
     tamano_fuente_cota: float = 6.5
+    tamano_fuente_etiqueta: float = 7.0
+    largo_maximo_etiqueta: int = 15  # códigos más largos se parten en varias líneas
     tamano_subplot_pulgadas: float = 6.0
     maximo_decimales_coordenadas: int = 4
     marcas_eje: int = 5

@@ -3,6 +3,7 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.2.0 | 2026-11-05 | Transmite el significado del campo de pisos.
 #   v1.1.0 | 2026-11-05 | Guarda el piso de cada parte y ordena las partes
 #          |            | de abajo hacia arriba (colores fijos por piso).
 #   v1.0.0 | 2026-11-05 | Creación. Regla de negocio "polígonos con el mismo
@@ -60,6 +61,7 @@ def agrupar_construcciones(capa: CapaCargada, seleccion: SeleccionCampos) -> lis
                 partes=tuple(partes),
                 pisos=_pisos(grupo[campo_pisos]) if campo_pisos else None,
                 pisos_partes=tuple(pisos_partes),
+                significado_pisos=seleccion.significado_pisos,
             )
         )
     if not campo_id:

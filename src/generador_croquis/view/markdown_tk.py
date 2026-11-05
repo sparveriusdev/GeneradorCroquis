@@ -3,6 +3,7 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.0.2 | 2026-11-05 | La numeración de listas no cuenta las sub-viñetas.
 #   v1.0.1 | 2026-11-05 | Párrafos de una cita separados por un solo salto
 #          |            | (los avisos de GitHub quedaban con un hueco).
 #   v1.0.0 | 2026-11-05 | Creación. Dibuja un Documento Markdown en un
@@ -235,8 +236,11 @@ class VisorMarkdown(ttk.Frame):
             self._insertar_linea(bloque.contenido, ("p",), "cuerpo")
             txt.insert(tk.END, "\n", ("p",))
         elif isinstance(bloque, Lista):
-            for n, elemento in enumerate(bloque.elementos, start=bloque.inicio):
+            numero = bloque.inicio - 1
+            for elemento in bloque.elementos:
                 anidado = elemento and elemento[0].texto.startswith("◦ ")
+                if not anidado:  # las sub-viñetas no cuentan en la numeración
+                    numero += 1
                 if anidado:
                     primero = Fragmento(
                         elemento[0].texto[2:],
@@ -247,7 +251,7 @@ class VisorMarkdown(ttk.Frame):
                     )
                     elemento = (primero, *elemento[1:])
                 tag = "li2" if anidado else "li"
-                marcador = "–\t" if anidado else (f"{n}.\t" if bloque.ordenada else "•\t")
+                marcador = "–\t" if anidado else (f"{numero}.\t" if bloque.ordenada else "•\t")
                 txt.insert(tk.END, marcador, (tag, "bala"))
                 self._insertar_linea(elemento, (tag,), "cuerpo")
                 txt.insert(tk.END, "\n", (tag,))

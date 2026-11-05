@@ -3,6 +3,7 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.2.0 | 2026-11-05 | Tabla sangrada dentro de una lista.
 #   v1.1.0 | 2026-11-05 | Prueba de avisos de GitHub (> [!WARNING]).
 #   v1.0.0 | 2026-11-05 | Creación. Pruebas del parser de Markdown, del
 #          |            | servicio de ayuda (GitHub / copia local) y de su
@@ -244,3 +245,15 @@ def test_aviso_de_github_muestra_su_titulo():
     titulo, cuerpo = cita.contenido
     assert texto_plano(titulo) == "⚠️ Advertencia" and titulo[0].negrita
     assert texto_plano(cuerpo) == "Cuidado con la tolerancia."
+
+
+def test_tabla_dentro_de_un_elemento_de_lista():
+    md = (
+        "1. Paso:\n   - Opción:\n\n     | A | B |\n     |---|---|\n     | 1 | 2 |\n\n2. Otro paso\n"
+    )
+    bloques = parsear(md).bloques
+    tabla = next(b for b in bloques if isinstance(b, Tabla))
+    assert [texto_plano(c) for c in tabla.filas[0]] == ["1", "2"]
+    assert all(
+        "|" not in texto_plano(e) for b in bloques if isinstance(b, Lista) for e in b.elementos
+    )

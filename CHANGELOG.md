@@ -33,6 +33,10 @@ y versionado con [SemVer](https://semver.org/lang/es/).
 - **Unidades superpuestas visibles**: el piso inferior va con línea gruesa y relleno; los
   superiores con línea fina discontinua y sin relleno. Donde varios pisos coinciden, sus
   trazos se alternan para que se vean todos.
+- Opción **El campo indica: Piso de la unidad / Total de pisos**, propuesta según el nombre
+  del campo (`PLANTA_UBICACION` → piso de la unidad; `NUMERO_PISOS` → total). Con «piso de la
+  unidad», cada croquis lleva el color de su piso y la leyenda **aunque tenga una sola unidad**
+  (p. ej. al agrupar por `IDENTIFICADOR`), y el título dice «Piso 2» o «Pisos 1, 2».
 - Manual: subsección **Vértices principales y tolerancia** con valores orientativos,
   procedimiento de ajuste y comparación visual.
 
@@ -41,12 +45,15 @@ y versionado con [SemVer](https://semver.org/lang/es/).
   la primera unidad).
 - **Coordenadas de los ejes con decimales automáticos**: en metros se muestran enteras
   (`4811905`), sin «.0000»; solo aparecen decimales si las marcas están a menos de 1 m.
-- Una construcción de una sola unidad usa siempre el primer color, aunque el campo de pisos
-  indique el número total de pisos.
+- Con «total de pisos», una construcción de una sola unidad usa siempre el primer color.
+- **Etiqueta del identificador más pequeña** y semitransparente; los códigos largos se parten
+  en varias líneas en lugar de ocupar todo el ancho del croquis.
 
 ### Corregido
 - La pestaña Ayuda muestra los avisos de GitHub (`> [!WARNING]`, `[!NOTE]`…) con su título en
   lugar del marcador, y sin un hueco entre el título y el texto.
+- Ayuda: las tablas dentro de una lista se dibujan como tabla, y la numeración de las listas
+  ya no cuenta las sub-viñetas.
 
 ## [1.1.0] - 2026-11-05
 
