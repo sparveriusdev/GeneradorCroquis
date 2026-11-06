@@ -3,6 +3,9 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.5.0 | 2026-11-06 | Etiqueta del ID fuera del polígono, sin tocar cotas,
+#          |            | con línea guía; arrastre simulado con el ratón; se
+#          |            | queda adentro si no hay hueco.
 #   v1.4.0 | 2026-11-05 | Vista desde arriba: todos los pisos con relleno,
 #          |            | superiores punteados, cota común del piso más alto.
 #   v1.3.0 | 2026-11-05 | Significado de pisos (ubicación / total), leyenda con
@@ -20,11 +23,14 @@ from __future__ import annotations
 import itertools
 
 import pytest
-from shapely.geometry import Polygon, box
+from matplotlib.backend_bases import MouseEvent
+from matplotlib.text import Text
+from shapely.geometry import Point, Polygon, box
 
 from generador_croquis.config import TemaCroquis
 from generador_croquis.domain import Construccion, OpcionesAcotado, SignificadoPisos
 from generador_croquis.rendering import RenderizadorMatplotlib
+from generador_croquis.rendering.colocacion import ColocadorEtiquetas
 from generador_croquis.rendering.coordenadas import decimales_necesarios
 from generador_croquis.rendering.renderizador import partir
 from generador_croquis.services import detectar_significado_pisos
@@ -272,3 +278,61 @@ def test_detectar_significado_pisos(campo, esperado):
 )
 def test_codigos_largos_se_parten_sin_perder_digitos(texto, esperado):
     assert partir(texto, 15) == esperado
+
+
+# ── Etiqueta del identificador ───────────────────────────────────────────────
+
+
+def etiquetas_id(figura):
+    return [t for ax in figura.axes for t in ax.texts if t.get_gid() == "etiqueta_id"]
+
+
+@pytest.mark.parametrize(
+    "construccion",
+    [
+        Construccion("A", (UNIDAD_1, UNIDAD_2), pisos=2),
+        Construccion("C", (Polygon([(0, 0), (10, 0), (10, 4), (4, 4), (4, 10), (0, 10)]),)),
+    ],
+)
+def test_etiqueta_del_id_fuera_del_poligono_con_linea_guia(construccion):
+    _, figura = renderizar(construccion)
+    figura.canvas.draw()
+    renderer = figura.canvas.get_renderer()
+    ax = figura.axes[0]
+    (etiqueta,) = etiquetas_id(figura)
+    assert not construccion.union.contains(Point(etiqueta.xyann))  # el texto, afuera
+    assert construccion.union.contains(Point(etiqueta.xy))  # la línea guía acaba adentro
+    caja = Text.get_window_extent(etiqueta, renderer)
+    x0, y0 = ax.transData.transform(construccion.union.bounds[:2])
+    x1, y1 = ax.transData.transform(construccion.union.bounds[2:])
+    assert not caja.overlaps(type(caja).from_extents(x0, y0, x1, y1))
+    assert ax.bbox.x0 <= caja.x0 and caja.x1 <= ax.bbox.x1
+    assert ax.bbox.y0 <= caja.y0 and caja.y1 <= ax.bbox.y1
+    for cota in cotas_de(figura):
+        assert not caja.overlaps(cota.get_window_extent(renderer))
+
+
+def test_etiqueta_del_id_se_puede_arrastrar():
+    _, figura = renderizar(Construccion("A", (UNIDAD_1,)))
+    figura.canvas.draw()
+    (etiqueta,) = etiquetas_id(figura)
+    ancla, inicio = etiqueta.xy, etiqueta.xyann
+    x, y = Text.get_window_extent(etiqueta, figura.canvas.get_renderer()).p0 + 3
+    canvas = figura.canvas
+    MouseEvent("button_press_event", canvas, x, y, button=1)._process()
+    MouseEvent("motion_notify_event", canvas, x + 40, y - 30, button=1)._process()
+    MouseEvent("button_release_event", canvas, x + 40, y - 30, button=1)._process()
+    assert etiqueta.xyann != pytest.approx(inicio)
+    assert etiqueta.xy == ancla  # la línea guía sigue apuntando a la construcción
+
+
+def test_etiqueta_del_id_se_queda_adentro_si_no_hay_hueco():
+    _, figura = renderizar(Construccion("A", (UNIDAD_1,)))
+    figura.canvas.draw()
+    ax = figura.axes[0]
+    (etiqueta,) = etiquetas_id(figura)
+    etiqueta.set_position(etiqueta.xy)  # vuelve al punto interior
+    colocador = ColocadorEtiquetas(ax, figura.canvas.get_renderer())
+    colocador.ocupadas.append(ax.bbox.frozen())  # todo el croquis ocupado
+    assert not colocador.colocar_fuera(etiqueta, UNIDAD_1)
+    assert etiqueta.xyann == pytest.approx(etiqueta.xy)

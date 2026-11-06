@@ -4,6 +4,8 @@ Archivo  : README.md
 Proyecto : Generador de Croquis
 ------------------------------------------------------------------------------
 CHANGELOG (versión interna del documento)
+  v2.3.0 | 2026-11-06 | 1.3.0: etiqueta del identificador fuera de la
+         |            | construcción y arrastrable en la vista previa.
   v2.2.1 | 2026-11-05 | 1.2.1: vista desde arriba, cotas con color del piso y
          |            | enlace a la hoja de ruta (ROADMAP.md).
   v2.2.0 | 2026-11-05 | Características de la 1.2.0: convenciones por piso y
@@ -73,6 +75,7 @@ con la medida de cada lado, el área, el perímetro y el número de pisos.
 | 🎨 **Un piso, un color** | Cada piso tiene siempre su color, y sus cotas también; un lado común se acota una vez, con el color del piso más alto. |
 | 🗂️ **Convenciones por piso** | Leyenda con el color, el estilo de línea y el área de cada piso. Vista desde arriba: cada zona con el color del piso más alto, y contornos punteados para los pisos superiores. |
 | 🧲 **Cotas sin solapes** | Cada etiqueta busca un hueco libre y, si se aleja, se une a su lado con una línea guía. |
+| 🏷️ **Etiqueta afuera y movible** | El identificador va fuera de la construcción, unido a ella con una línea guía, sin tapar cotas. En la vista previa se puede arrastrar, y la imagen exportada conserva la posición. |
 | 🌐 **Medidas en metros** | Las capas en grados se reproyectan solas a **EPSG:9377** (MAGNA-SIRGAS Origen Nacional). |
 | 🕳️ **Patios y multipolígonos** | Los huecos interiores se dibujan con línea punteada. |
 | 🖼️ **Exportación profesional** | PNG, JPG, PDF o SVG a 300 dpi, listos para informes y anexos técnicos. |
@@ -110,13 +113,14 @@ Descargue el archivo de su sistema desde **[la última versión](https://github.
 ```mermaid
 flowchart LR
     A["📂 <b>1. Abrir</b><br/>.shp · .zip · .gdb"] --> B["🧩 <b>2. Revisar campos</b><br/>identificador y pisos"]
-    B --> C["📐 <b>3. Generar</b><br/>vista previa con zoom"]
+    B --> C["📐 <b>3. Generar</b><br/>vista previa con zoom<br/>y etiquetas movibles"]
     C --> D["💾 <b>Exportar</b><br/>PNG · JPG · PDF · SVG"]
 ```
 
 1. **Abrir archivo…** o **Abrir carpeta GDB…**
 2. Revise el *identificador de la construcción* y el *número de pisos* (se detectan solos).
-3. **Generar croquis** y luego **Exportar imagen…**
+3. **Generar croquis**: si lo desea, arrastre la etiqueta naranja del identificador; luego
+   **Exportar imagen…**
 
 También desde la terminal: `GeneradorCroquis ruta/datos.zip` · `GeneradorCroquis --version`
 

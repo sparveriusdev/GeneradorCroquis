@@ -3,6 +3,9 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.2.0 | 2026-11-06 | Visor: aviso de que la etiqueta del identificador
+#          |            | se puede arrastrar y de que «Guardar imagen»
+#          |            | conserva la posición.
 #   v1.1.0 | 2026-11-05 | Estilo Material: diálogo de selección con título,
 #          |            | texto de apoyo, lista con contorno y acciones a la
 #          |            | derecha.
@@ -109,7 +112,16 @@ class DialogoSeleccion:
 
 
 class VentanaFigura:
-    """Ventana con la figura de matplotlib y su barra de navegación (zoom, mover)."""
+    """Ventana con la figura de matplotlib y su barra de navegación (zoom, mover).
+
+    La etiqueta naranja del identificador es arrastrable (``Annotation.draggable``): el
+    renderizador la deja así y aquí solo se avisa al usuario.
+    """
+
+    AVISO = (
+        "Puede arrastrar la etiqueta naranja del identificador para moverla (con Zoom y "
+        "Mover desactivados). «Guardar imagen» conserva la posición."
+    )
 
     def __init__(self, parent: tk.Misc, figura: Figure, titulo: str = "Croquis"):
         self.ventana = tk.Toplevel(parent)
@@ -122,6 +134,9 @@ class VentanaFigura:
         barra = NavigationToolbar2Tk(canvas, self.ventana, pack_toolbar=False)
         barra.update()
         barra.pack(side=tk.BOTTOM, fill=tk.X)
+        aviso = ttk.Frame(self.ventana, style="Status.TFrame", padding=(12, 4))
+        ttk.Label(aviso, text=self.AVISO, style="Status.TLabel").pack(side=tk.LEFT)
+        aviso.pack(side=tk.BOTTOM, fill=tk.X)
         canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
         canvas.draw_idle()
 

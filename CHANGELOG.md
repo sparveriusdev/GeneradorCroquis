@@ -4,6 +4,7 @@ Archivo  : CHANGELOG.md
 Proyecto : Generador de Croquis
 ------------------------------------------------------------------------------
 CHANGELOG (versión interna del documento)
+  v1.6.0 | 2026-11-06 | Añade la versión 1.3.0 (etiqueta del ID afuera).
   v1.5.0 | 2026-11-05 | Añade la versión 1.2.1 (vista desde arriba).
   v1.4.0 | 2026-11-05 | Añade la versión 1.2.0 (convenciones por piso).
   v1.3.1 | 2026-11-05 | Pendientes: avisos de GitHub en la Ayuda, manual.
@@ -23,6 +24,22 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y versionado con [SemVer](https://semver.org/lang/es/).
 
 ## [Unreleased]
+
+## [1.3.0] - 2026-11-06
+
+La etiqueta naranja del identificador ya no tapa la construcción ni sus cotas.
+
+### Añadido
+- En la vista previa se puede **arrastrar la etiqueta del identificador** con el ratón (con
+  Zoom y Mover desactivados). La línea guía la sigue y **Exportar imagen…** guarda la nueva
+  posición. Un aviso en la ventana lo recuerda.
+
+### Cambiado
+- La etiqueta del identificador se coloca **fuera de la construcción**, después de las cotas,
+  en el hueco libre con la línea guía más corta y sin cruzar otras etiquetas. Una **línea
+  guía** la une con un punto dentro de la construcción. Si no hay espacio afuera, queda
+  adentro como antes.
+- El recuadro de la etiqueta es más opaco, porque ya no va sobre el relleno.
 
 ## [1.2.1] - 2026-11-05
 
@@ -166,7 +183,8 @@ Primera versión como programa estructurado, a partir del script `generador_v1.p
 ### Seguridad
 - Protección contra rutas maliciosas en archivos `.zip` (*zip slip*).
 
-[Unreleased]: ../../compare/v1.2.1...HEAD
+[Unreleased]: ../../compare/v1.3.0...HEAD
+[1.3.0]: ../../releases/tag/v1.3.0
 [1.2.1]: ../../releases/tag/v1.2.1
 [1.2.0]: ../../releases/tag/v1.2.0
 [1.1.0]: ../../releases/tag/v1.1.0

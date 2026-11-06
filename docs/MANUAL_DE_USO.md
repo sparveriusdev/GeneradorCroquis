@@ -4,6 +4,9 @@ Archivo  : docs/MANUAL_DE_USO.md
 Proyecto : Generador de Croquis
 ------------------------------------------------------------------------------
 CHANGELOG (versión interna del documento)
+  v1.7.0 | 2026-11-06 | Versión 1.3.0: etiqueta del identificador fuera de
+         |            | la construcción con línea guía y arrastrable en la
+         |            | vista previa; ejemplo actualizado.
   v1.6.0 | 2026-11-05 | Versión 1.2.1: vista desde arriba (cada zona con el
          |            | color del piso más alto), contornos superiores
          |            | punteados y cota común con el color del piso más alto.
@@ -53,7 +56,8 @@ y produce una lámina con un **croquis técnico por construcción**. Cada croqui
 - La **medida de cada lado** en metros, entre los **vértices principales**, con la cota del
   mismo color que su unidad y sin que las etiquetas se monten unas sobre otras.
 - Los **huecos interiores** (patios, vacíos) con línea punteada.
-- Una etiqueta con el **identificador** y el **número de pisos**.
+- Una etiqueta con el **identificador** y el **número de pisos**, fuera de la construcción y
+  unida a ella con una línea guía.
 - El **área total** y el **perímetro total** al pie del croquis.
 
 ![Ejemplo de croquis](img/ejemplo_croquis.png)
@@ -182,6 +186,10 @@ inferior indica siempre qué hacer a continuación.
    - 🔍 **Zoom**: dibuje un rectángulo sobre la zona a ampliar.
    - ✥ **Mover**: arrastre para desplazarse.
    - 🏠 **Inicio**: vuelve a la vista completa.
+   - 🏷️ **Mover la etiqueta naranja**: con **Zoom** y **Mover** desactivados, arrástrela con
+     el ratón a donde se lea mejor. La línea guía la sigue y sigue apuntando a su
+     construcción. **Exportar imagen…** guarda la etiqueta en la nueva posición; si vuelve a
+     pulsar **Generar croquis**, las etiquetas regresan a su posición automática.
 
 También puede abrir un archivo directamente desde la terminal:
 `GeneradorCroquis ruta/al/archivo.zip`.
@@ -241,7 +249,7 @@ navegador.
 | Elemento | Significado |
 |---|---|
 | Título `Construcción: X  \|  3 pisos  \|  M partes` | Identificador, pisos («3 pisos» si el campo es el total; «Piso 2» o «Pisos 1, 2» si es el piso de cada unidad) y número de polígonos que la forman. |
-| Etiqueta naranja pequeña | Identificador y pisos, dentro de la construcción. Los códigos largos se parten en varias líneas; el código completo está en el título. |
+| Etiqueta naranja con línea guía | Identificador y pisos. Se coloca **fuera** de la construcción, en un hueco libre de cotas, y la línea termina en un punto (•) dentro de la construcción. Si no hay espacio afuera, queda adentro. Los códigos largos se parten en varias líneas; el código completo está en el título. Puede moverla en la vista previa. |
 | Cotas (`10.00 m`) | Longitud de cada lado del contorno exterior entre vértices principales, en metros, con dos decimales. Si el lado tiene vértices de ajuste, es la **suma de sus tramos**. |
 | Color de la cota | El mismo de la unidad a la que pertenece el lado. Cada piso tiene siempre el mismo color: piso 1 azul, piso 2 verde, piso 3 rojo, piso 4 morado… |
 | Cota de un lado común | Si varias unidades comparten un lado con la misma medida, se acota una sola vez, con el color del **piso más alto** que tiene ese lado (el mismo color de la zona que se ve junto a la cota). |

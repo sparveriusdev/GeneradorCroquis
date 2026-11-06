@@ -3,6 +3,11 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v2.5.0 | 2026-11-06 | La etiqueta del ID es una anotación: se coloca
+#          |            | fuera del polígono (después de las cotas, en el
+#          |            | hueco libre de línea más corta) con línea guía y
+#          |            | punto hasta su construcción, y se puede arrastrar en el visor
+#          |            | (la línea la sigue). Si no hay hueco, queda adentro.
 #   v2.4.0 | 2026-11-05 | Retroalimentación de oficina: todos los pisos con
 #          |            | relleno de su color y contornos superiores punteados
 #          |            | (sin trazos alternados). Modo «vista_superior» (por
@@ -55,9 +60,11 @@ from matplotlib.axes import Axes
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.colors import to_rgba
 from matplotlib.figure import Figure
+from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
-from matplotlib.text import Text
+from matplotlib.text import Annotation, Text
 from matplotlib.ticker import MaxNLocator
+from shapely.geometry.base import BaseGeometry
 
 from generador_croquis.config import ParametrosCotas, TemaCroquis
 from generador_croquis.domain.models import Construccion, Lado, OpcionesAcotado
@@ -108,6 +115,10 @@ class RenderizadorMatplotlib:
         self._tema = tema or TemaCroquis()
         self._cotas = cotas or ParametrosCotas()
         self._tamanos: WeakKeyDictionary[Figure, tuple[float, ...]] = WeakKeyDictionary()
+        # Etiqueta del ID -> (geometría de su construcción, punto donde acaba la línea guía).
+        self._anclas: WeakKeyDictionary[Annotation, tuple[BaseGeometry, Line2D]] = (
+            WeakKeyDictionary()
+        )
         self.cotas_sin_espacio = 0  # informe de la última figura
 
     # ── API pública ──────────────────────────────────────────────────────────
@@ -132,13 +143,14 @@ class RenderizadorMatplotlib:
         fig.set_layout_engine("tight", rect=(0, 0.02, 1, 0.96))
 
         # Fase 1: geometría, etiqueta del ID y escala de cada croquis.
-        pendientes: list[tuple[Axes, Text | None, list[_CotaPendiente]]] = []
+        pendientes: list[tuple[Axes, Annotation | None, list[_CotaPendiente]]] = []
         for ax, construccion in zip(ejes, construcciones, strict=False):
             pendientes.append((ax, *self._dibujar_construccion(ax, construccion, opciones)))
         for ax in ejes[n:]:
             ax.axis("off")
 
-        # Fase 2: con la disposición definitiva, colocar las cotas sin solapes.
+        # Fase 2: con la disposición definitiva, colocar las cotas sin solapes y luego la
+        # etiqueta del ID fuera del polígono (las cotas tienen prioridad junto a sus lados).
         fig.canvas.draw()
         renderer = fig.canvas.get_renderer()
         self.cotas_sin_espacio = 0
@@ -146,11 +158,15 @@ class RenderizadorMatplotlib:
             colocador = ColocadorEtiquetas(
                 ax, renderer, self._cotas.separacion_px, self._cotas.anillos
             )
-            if etiqueta_id is not None:
-                colocador.reservar(etiqueta_id)
             for cota in cotas:
                 colocador.colocar(cota.lado, self._crear_texto(ax, cota))
             self.cotas_sin_espacio += colocador.sin_espacio
+            if etiqueta_id is not None:
+                zona, ancla = self._anclas[etiqueta_id]
+                if colocador.colocar_fuera(etiqueta_id, zona):
+                    ancla.set_data([etiqueta_id.xy[0]], [etiqueta_id.xy[1]])
+                else:
+                    log.info("La etiqueta %r queda dentro del polígono", etiqueta_id.get_text())
         if self.cotas_sin_espacio:
             log.warning("%d cotas no encontraron un espacio libre", self.cotas_sin_espacio)
 
@@ -176,7 +192,7 @@ class RenderizadorMatplotlib:
 
     def _dibujar_construccion(
         self, ax: Axes, c: Construccion, opciones: OpcionesAcotado
-    ) -> tuple[Text | None, list[_CotaPendiente]]:
+    ) -> tuple[Annotation | None, list[_CotaPendiente]]:
         if not c.partes:
             ax.axis("off")
             return None, []
@@ -363,33 +379,55 @@ class RenderizadorMatplotlib:
         texto.set_in_layout(False)  # no debe alterar los márgenes ya calculados
         return texto
 
-    def _dibujar_etiqueta(self, ax: Axes, c: Construccion) -> Text:
-        """Etiqueta discreta en el interior: el texto completo ya está en el título."""
+    def _dibujar_etiqueta(self, ax: Axes, c: Construccion) -> Annotation:
+        """Etiqueta del ID con línea guía hasta un punto interior de la construcción.
+
+        Nace en ese punto; la fase 2 la lleva afuera. Es arrastrable: en el visor el usuario
+        puede moverla y la línea guía la sigue (``Guardar imagen`` conserva la posición).
+        """
         t = self._tema
         punto = c.union.representative_point()  # siempre dentro de la figura
         texto = partir(c.identificador, t.largo_maximo_etiqueta)
         if c.pisos is not None:
             texto += f"\n{c.descripcion_pisos}"
-        etiqueta = ax.text(
+        (ancla,) = ax.plot(
             punto.x,
             punto.y,
+            marker="o",
+            markersize=t.tamano_punto_etiqueta,
+            color=t.color_etiqueta_borde,
+            zorder=6,
+        )
+        ancla.set_in_layout(False)
+        etiqueta = ax.annotate(
             texto,
+            xy=(punto.x, punto.y),
+            xytext=(punto.x, punto.y),
             ha="center",
             va="center",
             fontsize=t.tamano_fuente_etiqueta,
             fontweight="bold",
             color=t.color_titulo,
-            alpha=0.85,
             bbox={
                 "boxstyle": "round,pad=0.25",
                 "facecolor": t.color_etiqueta_fondo,
                 "edgecolor": t.color_etiqueta_borde,
-                "alpha": 0.55,
+                "alpha": t.alfa_etiqueta,
                 "linewidth": 0.6,
             },
+            arrowprops={
+                "arrowstyle": "-",
+                "color": t.color_etiqueta_borde,
+                "linewidth": 0.8,
+                "shrinkA": 0,
+                "shrinkB": 0,
+            },
             zorder=7,
+            gid="etiqueta_id",
         )
         etiqueta.set_in_layout(False)
+        etiqueta.draggable(True)
+        self._anclas[etiqueta] = (c.union, ancla)
         return etiqueta
 
     def _configurar_ejes(self, ax: Axes, c: Construccion) -> None:

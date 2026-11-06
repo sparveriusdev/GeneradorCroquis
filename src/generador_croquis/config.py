@@ -3,6 +3,8 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.8.0 | 2026-11-06 | Etiqueta del ID fuera del polígono: opacidad del
+#          |            | recuadro y tamaño del punto de la línea guía.
 #   v1.7.0 | 2026-11-05 | Modo de superposición (vista_superior/transparente),
 #          |            | línea punteada para pisos superiores; se quita el
 #          |            | color gris de la cota común.
@@ -213,6 +215,8 @@ class TemaCroquis:
     tamano_fuente_cota: float = 6.5
     tamano_fuente_etiqueta: float = 7.0
     largo_maximo_etiqueta: int = 15  # códigos más largos se parten en varias líneas
+    alfa_etiqueta: float = 0.85  # recuadro de la etiqueta del ID (va fuera del polígono)
+    tamano_punto_etiqueta: float = 2.5  # punto donde termina su línea guía
     tamano_subplot_pulgadas: float = 6.0
     maximo_decimales_coordenadas: int = 4
     marcas_eje: int = 5

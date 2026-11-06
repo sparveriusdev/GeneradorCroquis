@@ -3,6 +3,12 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.1.0 | 2026-11-06 | colocar_fuera(): lleva la etiqueta del ID fuera del
+#          |            | polígono, al hueco libre con la línea guía más corta
+#          |            | y sin cruzar cotas; la línea termina en el punto
+#          |            | interior más cercano. Si no hay hueco, se queda
+#          |            | adentro. Mide solo el texto de una anotación (no su
+#          |            | línea guía). Se quita reservar() (sin uso).
 #   v1.0.0 | 2026-11-05 | Creación. Colocación de cotas sin solapes: prueba
 #          |            | posiciones candidatas (afuera primero, a lo largo
 #          |            | del lado y cada vez más lejos; adentro al final),
@@ -18,14 +24,28 @@ from dataclasses import dataclass
 
 from matplotlib.axes import Axes
 from matplotlib.backend_bases import RendererBase
-from matplotlib.text import Text
+from matplotlib.text import Annotation, Text
 from matplotlib.transforms import Bbox
+from shapely.geometry import LineString, Point, box
+from shapely.geometry.base import BaseGeometry
+from shapely.ops import nearest_points
 
 from generador_croquis.domain.models import Lado
 from generador_croquis.services.geometria import angulo, angulo_legible
 
 FRACCIONES = (0.5, 0.35, 0.65, 0.2, 0.8)  # posiciones a lo largo del lado
 HOLGURA_PX = 2.0  # espacio mínimo entre etiquetas
+# Posiciones relativas alrededor de la caja del polígono (-1..1) para la etiqueta del ID.
+_PASOS = (-1.0, -0.5, 0.0, 0.5, 1.0)
+POSICIONES_CAJA = tuple(
+    dict.fromkeys(
+        [(f, s) for f in _PASOS for s in (1.0, -1.0)]
+        + [(s, f) for f in _PASOS for s in (1.0, -1.0)]
+    )
+)
+MARGEN_ANCLA_PX = 6.0  # la línea guía termina este tanto dentro del polígono
+DISTANCIA_MINIMA_PX = 10.0  # hueco entre la caja del polígono y la etiqueta del ID
+PENALIZACION_CRUCE_PX = 400.0  # una línea guía que cruza una cota «cuesta» esto de largo
 
 
 @dataclass
@@ -59,12 +79,14 @@ class ColocadorEtiquetas:
         self.ocupadas: list[Bbox] = []
         self.sin_espacio = 0
 
-    def reservar(self, artista: Text) -> None:
-        """Marca como ocupado el espacio de un texto ya dibujado (p. ej. la etiqueta del ID)."""
-        self.ocupadas.append(artista.get_window_extent(self._renderer))
-
     def _caja(self, texto: Text) -> Bbox:
-        return texto.get_window_extent(self._renderer).expanded(1.0, 1.0).padded(HOLGURA_PX)
+        # Text.get_window_extent: en una anotación mide solo el texto, sin la línea guía.
+        caja = Text.get_window_extent(texto, self._renderer)
+        recuadro = texto.get_bbox_patch()
+        if recuadro is not None:  # el recuadro redondeado sobresale del texto
+            relleno = recuadro.get_boxstyle().pad * texto.get_fontsize()
+            caja = caja.padded(self._renderer.points_to_pixels(relleno))
+        return caja.padded(HOLGURA_PX)
 
     def _libre(self, caja: Bbox) -> bool:
         area = self._ax.bbox
@@ -115,6 +137,55 @@ class ColocadorEtiquetas:
         self._fijar(lado, texto, self._caja(texto), cand, posicion)
         self.sin_espacio += 1
         return False
+
+    def colocar_fuera(self, texto: Annotation, zona: BaseGeometry, intentos: int = 8) -> bool:
+        """Lleva la etiqueta ``texto`` fuera de la construcción ``zona`` (en datos).
+
+        Prueba posiciones alrededor de la caja de ``zona``, cada vez más lejos, y entre las
+        libres (dentro del área y sin tocar etiquetas ya colocadas) elige la de línea guía más
+        corta que no cruce otras etiquetas. La línea termina en el punto de ``zona`` más
+        cercano, un poco hacia adentro. Si no hay hueco, la deja donde estaba y devuelve False.
+        """
+        datos_a_px = self._ax.transData
+        a_datos = datos_a_px.inverted()
+        x0, y0 = datos_a_px.transform(zona.bounds[:2])
+        x1, y1 = datos_a_px.transform(zona.bounds[2:])
+        # Zona un poco más adentro para que la línea guía cruce el borde y no muera en él.
+        escala = abs(a_datos.transform((MARGEN_ANCLA_PX, 0))[0] - a_datos.transform((0, 0))[0])
+        interior = zona.buffer(-escala)
+        if interior.is_empty:
+            interior = zona.representative_point()
+        medida = self._caja(texto)
+        ancho, alto = medida.width, medida.height
+
+        mejor: tuple[float, tuple[float, float], tuple[float, float], Bbox] | None = None
+        for k in range(intentos):
+            hueco = DISTANCIA_MINIMA_PX + k * (alto / 2 + HOLGURA_PX)
+            mx, my = (x1 - x0) / 2 + hueco + ancho / 2, (y1 - y0) / 2 + hueco + alto / 2
+            cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+            for fx, fy in POSICIONES_CAJA:
+                px, py = cx + fx * mx, cy + fy * my
+                posicion = tuple(a_datos.transform((px, py)))
+                texto.set_position(posicion)
+                caja = self._caja(texto)
+                if not self._libre(caja):
+                    continue
+                ancla = nearest_points(interior, Point(posicion))[0]
+                ax_, ay_ = datos_a_px.transform((ancla.x, ancla.y))
+                guia = LineString([(px, py), (ax_, ay_)])
+                cruces = sum(guia.intersects(box(o.x0, o.y0, o.x1, o.y1)) for o in self.ocupadas)
+                puntaje = guia.length + cruces * PENALIZACION_CRUCE_PX
+                if mejor is None or puntaje < mejor[0]:
+                    mejor = (puntaje, posicion, (ancla.x, ancla.y), caja)
+
+        if mejor is None:
+            texto.set_position(texto.xy)
+            return False
+        _, posicion, ancla, caja = mejor
+        texto.set_position(posicion)
+        texto.xy = ancla
+        self.ocupadas.append(caja)
+        return True
 
     def _fijar(
         self, lado: Lado, texto: Text, caja: Bbox, cand: Candidato, posicion: tuple[float, float]

@@ -4,6 +4,9 @@ Archivo  : ROADMAP.md
 Proyecto : Generador de Croquis
 ------------------------------------------------------------------------------
 CHANGELOG (versión interna del documento)
+  v1.1.0 | 2026-11-06 | 1.3.0 publicada (etiqueta del ID afuera y
+         |            | arrastrable); GeoPackage pasa a 1.4.0 y GeoParquet
+         |            | a 1.5.0.
   v1.0.0 | 2026-11-05 | Creación. Versiones publicadas, plan de 1.3.0
          |            | (GeoPackage) y 1.4.0 (GeoParquet), pendientes
          |            | técnicos y agentes de apoyo propuestos.
@@ -26,8 +29,9 @@ correcciones = PATCH.
 | 1.1.0 | Acotado por vértices principales, color por unidad, cotas sin solapes. |
 | 1.2.0 | Convenciones por piso, significado del campo de pisos, coordenadas sin decimales innecesarios. |
 | 1.2.1 | Vista desde arriba (cada zona con el color del piso más alto) y cotas con el color del piso. |
+| 1.3.0 | Etiqueta del identificador fuera de la construcción, con línea guía, y arrastrable en la vista previa. |
 
-## 🔜 1.3.0 · Soporte para GeoPackage (`.gpkg`)
+## 🔜 1.4.0 · Soporte para GeoPackage (`.gpkg`)
 
 **Objetivo:** abrir archivos GeoPackage como se abren hoy Shapefile y GDB.
 
@@ -42,7 +46,7 @@ correcciones = PATCH.
 **Viabilidad:** alta. GDAL/pyogrio ya incluye el controlador GPKG, así que no hay
 dependencias nuevas ni aumento del tamaño del ejecutable.
 
-## 🔜 1.4.0 · Soporte para GeoParquet (`.parquet`)
+## 🔜 1.5.0 · Soporte para GeoParquet (`.parquet`)
 
 **Objetivo:** abrir capas en formato GeoParquet.
 
@@ -79,4 +83,4 @@ Agentes del proyecto en `.claude/agents/`, con instrucciones fijas, para tareas 
 - **Publicación:** recorre la lista de verificación (versión, CHANGELOG, manual y capturas,
   CI en verde) y prepara el tag. La publicación sigue requiriendo la confirmación del usuario.
 - **Formatos de entrada:** plantilla para agregar una nueva `FuenteDatos` con sus pruebas
-  (útil para 1.3.0 y 1.4.0).
+  (útil para 1.4.0 y 1.5.0).
