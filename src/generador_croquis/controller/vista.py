@@ -3,6 +3,7 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.3.0 | 2026-11-06 | configurar_campos recibe el campo de uso sugerido.
 #   v1.2.0 | 2026-11-05 | mostrar_significado_pisos (piso de la unidad / total).
 #   v1.1.0 | 2026-11-05 | mostrar_info -> mostrar_estado (barra de estado) y
 #          |            | nuevo mostrar_resumen (tabla de datos de la capa).
@@ -49,6 +50,8 @@ class VistaCroquis(Protocol):
         campo_pisos: str | None,
         nota_id: str,
         nota_pisos: str,
+        campo_uso: str | None = None,
+        nota_uso: str = "Opcional",
     ) -> None: ...
 
     def mostrar_significado_pisos(

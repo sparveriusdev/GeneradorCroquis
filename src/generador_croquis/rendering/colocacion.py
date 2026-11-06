@@ -3,6 +3,10 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.2.0 | 2026-11-06 | colocar_fuera() busca en una rejilla sobre todo el
+#          |            | croquis (no solo alrededor de su caja): cabe en
+#          |            | croquis pequeños o con leyenda ancha y puede usar
+#          |            | huecos como la muesca de una L, sin entrar en patios.
 #   v1.1.0 | 2026-11-06 | colocar_fuera(): lleva la etiqueta del ID fuera del
 #          |            | polígono, al hueco libre con la línea guía más corta
 #          |            | y sin cruzar cotas; la línea termina en el punto
@@ -22,29 +26,24 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
+import numpy as np
+import shapely
 from matplotlib.axes import Axes
 from matplotlib.backend_bases import RendererBase
 from matplotlib.text import Annotation, Text
 from matplotlib.transforms import Bbox
-from shapely.geometry import LineString, Point, box
+from shapely.geometry import LineString, Point, Polygon, box
 from shapely.geometry.base import BaseGeometry
-from shapely.ops import nearest_points
+from shapely.ops import nearest_points, unary_union
 
 from generador_croquis.domain.models import Lado
-from generador_croquis.services.geometria import angulo, angulo_legible
+from generador_croquis.services.geometria import angulo, angulo_legible, poligonos_de
 
 FRACCIONES = (0.5, 0.35, 0.65, 0.2, 0.8)  # posiciones a lo largo del lado
 HOLGURA_PX = 2.0  # espacio mínimo entre etiquetas
-# Posiciones relativas alrededor de la caja del polígono (-1..1) para la etiqueta del ID.
-_PASOS = (-1.0, -0.5, 0.0, 0.5, 1.0)
-POSICIONES_CAJA = tuple(
-    dict.fromkeys(
-        [(f, s) for f in _PASOS for s in (1.0, -1.0)]
-        + [(s, f) for f in _PASOS for s in (1.0, -1.0)]
-    )
-)
 MARGEN_ANCLA_PX = 6.0  # la línea guía termina este tanto dentro del polígono
-DISTANCIA_MINIMA_PX = 10.0  # hueco entre la caja del polígono y la etiqueta del ID
+DISTANCIA_MINIMA_PX = 10.0  # hueco mínimo entre la construcción y la etiqueta del ID
+PASO_REJILLA_PX = 6.0  # separación de las posiciones que se prueban para la etiqueta del ID
 PENALIZACION_CRUCE_PX = 400.0  # una línea guía que cruza una cota «cuesta» esto de largo
 
 
@@ -138,52 +137,66 @@ class ColocadorEtiquetas:
         self.sin_espacio += 1
         return False
 
-    def colocar_fuera(self, texto: Annotation, zona: BaseGeometry, intentos: int = 8) -> bool:
+    def colocar_fuera(self, texto: Annotation, zona: BaseGeometry) -> bool:
         """Lleva la etiqueta ``texto`` fuera de la construcción ``zona`` (en datos).
 
-        Prueba posiciones alrededor de la caja de ``zona``, cada vez más lejos, y entre las
-        libres (dentro del área y sin tocar etiquetas ya colocadas) elige la de línea guía más
-        corta que no cruce otras etiquetas. La línea termina en el punto de ``zona`` más
-        cercano, un poco hacia adentro. Si no hay hueco, la deja donde estaba y devuelve False.
+        Recorre una rejilla de posiciones sobre todo el croquis y, entre las libres (dentro del
+        área, sin tocar etiquetas ya colocadas ni la construcción, patios incluidos), elige la
+        más cercana a la construcción cuya línea guía no cruce otras etiquetas. La línea
+        termina en el punto de ``zona`` más cercano, un poco hacia adentro. Si no hay hueco, la
+        deja donde estaba y devuelve False.
         """
         datos_a_px = self._ax.transData
-        a_datos = datos_a_px.inverted()
-        x0, y0 = datos_a_px.transform(zona.bounds[:2])
-        x1, y1 = datos_a_px.transform(zona.bounds[2:])
-        # Zona un poco más adentro para que la línea guía cruce el borde y no muera en él.
-        escala = abs(a_datos.transform((MARGEN_ANCLA_PX, 0))[0] - a_datos.transform((0, 0))[0])
-        interior = zona.buffer(-escala)
+
+        def a_px(geom: BaseGeometry) -> BaseGeometry:
+            return shapely.transform(geom, datos_a_px.transform)  # recibe un arreglo N×2
+
+        poligonos = poligonos_de(zona) or [zona.envelope]
+        silueta = a_px(unary_union([Polygon(p.exterior) for p in poligonos]))
+        prohibida = silueta.buffer(DISTANCIA_MINIMA_PX)
+        shapely.prepare(prohibida)
+        # Un poco hacia adentro para que la línea guía cruce el borde y no muera en él.
+        interior = a_px(zona).buffer(-MARGEN_ANCLA_PX)
         if interior.is_empty:
-            interior = zona.representative_point()
+            interior = a_px(zona.representative_point())
+
         medida = self._caja(texto)
         ancho, alto = medida.width, medida.height
+        area = self._ax.bbox
+        xs = np.arange(area.x0 + ancho / 2, area.x1 - ancho / 2, PASO_REJILLA_PX)
+        ys = np.arange(area.y0 + alto / 2, area.y1 - alto / 2, PASO_REJILLA_PX)
+        cx, cy = (m.ravel() for m in np.meshgrid(xs, ys))
+        x0, y0, x1, y1 = cx - ancho / 2, cy - alto / 2, cx + ancho / 2, cy + alto / 2
+        # Libres de las etiquetas ya colocadas (mismo criterio que _libre, en lote).
+        libre = np.ones(cx.shape, dtype=bool)
+        for o in self.ocupadas:
+            libre &= (x1 < o.x0) | (x0 > o.x1) | (y1 < o.y0) | (y0 > o.y1)
+        rectangulos = shapely.box(x0[libre], y0[libre], x1[libre], y1[libre])
+        fuera = ~shapely.intersects(prohibida, rectangulos)
+        rectangulos = rectangulos[fuera]
+        centros = np.column_stack([cx[libre][fuera], cy[libre][fuera]])
+        distancias = shapely.distance(rectangulos, interior)
 
-        mejor: tuple[float, tuple[float, float], tuple[float, float], Bbox] | None = None
-        for k in range(intentos):
-            hueco = DISTANCIA_MINIMA_PX + k * (alto / 2 + HOLGURA_PX)
-            mx, my = (x1 - x0) / 2 + hueco + ancho / 2, (y1 - y0) / 2 + hueco + alto / 2
-            cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
-            for fx, fy in POSICIONES_CAJA:
-                px, py = cx + fx * mx, cy + fy * my
-                posicion = tuple(a_datos.transform((px, py)))
-                texto.set_position(posicion)
-                caja = self._caja(texto)
-                if not self._libre(caja):
-                    continue
-                ancla = nearest_points(interior, Point(posicion))[0]
-                ax_, ay_ = datos_a_px.transform((ancla.x, ancla.y))
-                guia = LineString([(px, py), (ax_, ay_)])
-                cruces = sum(guia.intersects(box(o.x0, o.y0, o.x1, o.y1)) for o in self.ocupadas)
-                puntaje = guia.length + cruces * PENALIZACION_CRUCE_PX
-                if mejor is None or puntaje < mejor[0]:
-                    mejor = (puntaje, posicion, (ancla.x, ancla.y), caja)
+        mejor: tuple[float, Bbox, Point] | None = None
+        for k in np.argsort(distancias, kind="stable"):
+            if mejor is not None and distancias[k] >= mejor[0]:
+                break  # las siguientes están más lejos: no pueden mejorar
+            centro = Point(centros[k])
+            ancla = nearest_points(interior, centro)[0]
+            guia = LineString([centro, ancla])
+            cruces = sum(guia.intersects(box(o.x0, o.y0, o.x1, o.y1)) for o in self.ocupadas)
+            puntaje = float(distancias[k]) + cruces * PENALIZACION_CRUCE_PX
+            if mejor is None or puntaje < mejor[0]:
+                caja = Bbox.from_bounds(centro.x - ancho / 2, centro.y - alto / 2, ancho, alto)
+                mejor = (puntaje, caja, ancla)
 
         if mejor is None:
             texto.set_position(texto.xy)
             return False
-        _, posicion, ancla, caja = mejor
-        texto.set_position(posicion)
-        texto.xy = ancla
+        _, caja, ancla = mejor
+        a_datos = datos_a_px.inverted()
+        texto.set_position(tuple(a_datos.transform((caja.x0 + ancho / 2, caja.y0 + alto / 2))))
+        texto.xy = tuple(a_datos.transform((ancla.x, ancla.y)))
         self.ocupadas.append(caja)
         return True
 

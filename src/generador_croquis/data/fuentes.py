@@ -3,6 +3,9 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.1.0 | 2026-11-06 | LecturaFuente lleva los dominios codificados de la
+#          |            | capa (GDB, también dentro de un .zip) para mostrar
+#          |            | descripciones en lugar de códigos (p. ej. USO).
 #   v1.0.1 | 2026-11-05 | Rutas internas del .zip con '/' en todos los SO
 #          |            | (en Windows se mostraban con '\').
 #   v1.0.0 | 2026-11-05 | Creación. Patrón Strategy para fuentes de datos
@@ -24,13 +27,14 @@ from __future__ import annotations
 
 import tempfile
 import zipfile
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Protocol
 
 import geopandas as gpd
 import pyogrio
 
+from generador_croquis.data.dominios import Dominios, leer_dominios
 from generador_croquis.domain.exceptions import (
     ArchivoInvalidoError,
     OperacionCanceladaError,
@@ -48,10 +52,12 @@ class Selector(Protocol):
 
 @dataclass(frozen=True)
 class LecturaFuente:
-    """Resultado crudo de leer una fuente: el GeoDataFrame y un nombre legible."""
+    """Resultado crudo de leer una fuente: el GeoDataFrame, un nombre legible y los
+    dominios codificados de sus campos (solo en GDB; vacío en otros formatos)."""
 
     gdf: gpd.GeoDataFrame
     nombre: str
+    dominios: Dominios = field(default_factory=dict)
 
 
 class FuenteDatos(Protocol):
@@ -121,7 +127,9 @@ class FuenteGdb:
         capa = elegir(
             selector, "Seleccionar capa", "Seleccione la capa a utilizar:", self.listar_capas(ruta)
         )
-        return LecturaFuente(leer_capa(ruta, capa), f"{ruta.name} > {capa}")
+        return LecturaFuente(
+            leer_capa(ruta, capa), f"{ruta.name} > {capa}", leer_dominios(ruta, capa)
+        )
 
     @staticmethod
     def listar_capas(ruta: Path) -> list[str]:
@@ -173,7 +181,7 @@ class FuenteZip:
             fuente = self._gdb if ruta_interna in gdbs else self._shp
             lectura = fuente.leer(ruta_interna, selector)
             nombre_interno = lectura.nombre.replace(ruta_interna.name, elegido, 1)
-            return LecturaFuente(lectura.gdf, f"{ruta.name} > {nombre_interno}")
+            return LecturaFuente(lectura.gdf, f"{ruta.name} > {nombre_interno}", lectura.dominios)
 
     @staticmethod
     def _extraer(ruta: Path, destino: Path) -> None:

@@ -4,6 +4,9 @@ Archivo  : docs/MANUAL_DE_USO.md
 Proyecto : Generador de Croquis
 ------------------------------------------------------------------------------
 CHANGELOG (versión interna del documento)
+  v1.8.0 | 2026-11-06 | Versión 1.4.0: campo «Uso» (opcional) con la
+         |            | descripción del dominio de la GDB en las
+         |            | convenciones; capturas actualizadas.
   v1.7.0 | 2026-11-06 | Versión 1.3.0: etiqueta del identificador fuera de
          |            | la construcción con línea guía y arrastrable en la
          |            | vista previa; ejemplo actualizado.
@@ -32,7 +35,7 @@ CHANGELOG (versión interna del documento)
 -->
 # Manual de uso — Generador de Croquis
 
-> Corresponde a la versión **1.2.1** de la aplicación.
+> Corresponde a la versión **1.4.0** de la aplicación.
 
 ## Contenido
 
@@ -58,6 +61,8 @@ y produce una lámina con un **croquis técnico por construcción**. Cada croqui
 - Los **huecos interiores** (patios, vacíos) con línea punteada.
 - Una etiqueta con el **identificador** y el **número de pisos**, fuera de la construcción y
   unida a ella con una línea guía.
+- Las **convenciones** de cada piso, con su área y, si se elige el campo de uso, el **uso** de
+  sus unidades.
 - El **área total** y el **perímetro total** al pie del croquis.
 
 ![Ejemplo de croquis](img/ejemplo_croquis.png)
@@ -132,6 +137,7 @@ El valor debe coincidir con el que aparece en `SHA256SUMS.txt`.
 |---|---|---|
 | **Identificador** | Agrupa los polígonos que forman una misma construcción. | `id`, `cod`, `codigo`, `code`, `id_construccion`, `predio`, `lote`, `ficha`, `npn`, `matricula`, `objectid`… |
 | **Pisos** | Número de pisos que se muestra en el croquis. | `pisos`, `piso`, `niveles`, `floors`, `num_pisos`, `nro_pisos`, `plantas`… |
+| **Uso** | Uso de cada unidad, que se muestra en las convenciones. | `uso`, `uso_construccion`, `uso_unidad`, `destino`, `destinacion`, `use`… |
 
 Los nombres se reconocen sin distinguir mayúsculas y también como parte de un nombre más largo
 (por ejemplo `COD_CONST` o `NUM_PISOS`). Si no se detectan, se eligen a mano en la lista.
@@ -167,6 +173,17 @@ inferior indica siempre qué hacer a continuación.
      unidad**. Para ver juntas todas las unidades de una construcción, agrupe por un código
      que compartan (p. ej. `CODIGO_UNIDAD_CONSTRUCCION`); si agrupa por `IDENTIFICADOR`, cada
      unidad sale en su propio croquis, con su piso y su leyenda.
+   - *Uso*: opcional; con `(ninguno)` las convenciones no muestran usos. Si se elige, cada
+     entrada de las convenciones muestra debajo del piso y su área el uso de sus unidades
+     (si un piso tiene unidades con usos distintos, se listan todos). La leyenda aparece
+     aunque el croquis tenga una sola unidad.
+
+     En una **File Geodatabase** (también dentro de un `.zip`), el campo suele guardar un
+     **código** con un **dominio** que lo describe. El programa lee ese dominio y muestra la
+     descripción: en LADM-COL, `USO = 11` aparece como «(Residencial) Vivienda hasta 3
+     pisos». En un Shapefile no hay dominios, así que se muestra el valor tal como está
+     (conviene que el campo ya tenga el texto del uso). Los usos largos se parten en
+     varias líneas.
    - *Acotado*: con **Acotar solo vértices principales** activado (recomendado), los vértices
      de ajuste que se apartan menos que la **tolerancia** (0,15 m por defecto) de la recta
      entre esquinas no se acotan: el lado se mide de esquina a esquina, sumando sus tramos.
@@ -257,7 +274,7 @@ navegador.
 | Línea punteada | Hueco interior (patio o vacío). Sus lados no se acotan. |
 | Puntos grandes | Vértices principales (esquinas reales). |
 | Puntos pequeños | Vértices de ajuste: forman parte del polígono, pero no se acotan. |
-| Recuadro «Convenciones» | Color y estilo de línea de cada piso, con su área. Aparece cuando la construcción tiene 2 o más unidades, o siempre si el campo de pisos indica el **piso de la unidad**. |
+| Recuadro «Convenciones» | Color y estilo de línea de cada piso, con su área y, debajo, el **uso** de sus unidades si se eligió el campo de uso. Aparece cuando la construcción tiene 2 o más unidades, siempre si el campo de pisos indica el **piso de la unidad** y siempre que haya un uso. |
 | Color de relleno de cada zona | Vista desde arriba: cada zona se pinta con el color (en tono claro) del **piso más alto** que la cubre. Así se ve de un vistazo qué parte tiene 2, 3 o 4 pisos. |
 | Línea continua gruesa | Contorno del piso más bajo (o de una unidad que no está encima de otra). |
 | Línea punteada | Contorno de una unidad que está **encima** de otra de un piso inferior. Deja ver los límites de cada piso aunque su zona quede cubierta por un piso más alto. |

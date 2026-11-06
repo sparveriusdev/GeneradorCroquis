@@ -4,6 +4,7 @@ Archivo  : CHANGELOG.md
 Proyecto : Generador de Croquis
 ------------------------------------------------------------------------------
 CHANGELOG (versión interna del documento)
+  v1.7.0 | 2026-11-06 | Añade la versión 1.4.0 (uso en las convenciones).
   v1.6.0 | 2026-11-06 | Añade la versión 1.3.0 (etiqueta del ID afuera).
   v1.5.0 | 2026-11-05 | Añade la versión 1.2.1 (vista desde arriba).
   v1.4.0 | 2026-11-05 | Añade la versión 1.2.0 (convenciones por piso).
@@ -24,6 +25,25 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y versionado con [SemVer](https://semver.org/lang/es/).
 
 ## [Unreleased]
+
+## [1.4.0] - 2026-11-06
+
+Las convenciones de cada croquis pueden mostrar el uso de las unidades.
+
+### Añadido
+- Nuevo campo **Uso** (opcional) en *Campos de la capa*. Se detecta solo (`uso`, `destino`,
+  `use`…). Cada entrada de las convenciones muestra, debajo del piso y su área, el uso de sus
+  unidades; si un piso tiene usos distintos, se listan todos.
+- En una **File Geodatabase** (también dentro de un `.zip`) se leen los **dominios de
+  valores codificados** y se muestra la descripción en lugar del código: en LADM-COL,
+  `USO = 11` aparece como «(Residencial) Vivienda hasta 3 pisos». Sin dominio (por ejemplo,
+  en un Shapefile) se muestra el valor tal cual.
+- Con campo de uso, la leyenda aparece aunque el croquis tenga una sola unidad.
+
+### Cambiado
+- La etiqueta del identificador busca su hueco en todo el croquis, no solo alrededor de la
+  construcción. Así queda afuera también en croquis pequeños o con leyenda ancha, y puede
+  usar huecos como la muesca de una L, sin entrar en los patios.
 
 ## [1.3.0] - 2026-11-06
 
@@ -183,7 +203,8 @@ Primera versión como programa estructurado, a partir del script `generador_v1.p
 ### Seguridad
 - Protección contra rutas maliciosas en archivos `.zip` (*zip slip*).
 
-[Unreleased]: ../../compare/v1.3.0...HEAD
+[Unreleased]: ../../compare/v1.4.0...HEAD
+[1.4.0]: ../../releases/tag/v1.4.0
 [1.3.0]: ../../releases/tag/v1.3.0
 [1.2.1]: ../../releases/tag/v1.2.1
 [1.2.0]: ../../releases/tag/v1.2.0

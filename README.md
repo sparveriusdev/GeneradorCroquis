@@ -4,6 +4,8 @@ Archivo  : README.md
 Proyecto : Generador de Croquis
 ------------------------------------------------------------------------------
 CHANGELOG (versión interna del documento)
+  v2.4.0 | 2026-11-06 | 1.4.0: campo de uso en las convenciones, con la
+         |            | descripción del dominio de la GDB.
   v2.3.0 | 2026-11-06 | 1.3.0: etiqueta del identificador fuera de la
          |            | construcción y arrastrable en la vista previa.
   v2.2.1 | 2026-11-05 | 1.2.1: vista desde arriba, cotas con color del piso y
@@ -69,10 +71,11 @@ con la medida de cada lado, el área, el perímetro y el número de pisos.
 | | |
 |---|---|
 | 📂 **Múltiples formatos** | `.shp`, `.zip` (con shapefiles o `.gdb` en cualquier subcarpeta) y carpetas File Geodatabase. Si hay varias capas, el programa pregunta cuál usar. |
-| 🧠 **Detección automática** | Reconoce los campos de identificador (`codigo`, `npn`, `predio`, `objectid`…) y de pisos (`pisos`, `niveles`, `floors`…). |
+| 🧠 **Detección automática** | Reconoce los campos de identificador (`codigo`, `npn`, `predio`, `objectid`…), de pisos (`pisos`, `niveles`, `floors`…) y de uso (`uso`, `destino`…). |
 | 🧱 **Agrupación inteligente** | Los polígonos con el mismo identificador forman una sola construcción, con todas sus partes. |
 | 📏 **Acotado inteligente** | Solo se acotan los **vértices principales**: los de ajuste se agrupan y el lado mide la suma de sus tramos (tolerancia ajustable). |
 | 🎨 **Un piso, un color** | Cada piso tiene siempre su color, y sus cotas también; un lado común se acota una vez, con el color del piso más alto. |
+| 🏠 **Uso en las convenciones** | Elija el campo de uso (p. ej. `USO`) y cada piso muestra el uso de sus unidades. En una GDB se lee el dominio: `11` → «(Residencial) Vivienda hasta 3 pisos». |
 | 🗂️ **Convenciones por piso** | Leyenda con el color, el estilo de línea y el área de cada piso. Vista desde arriba: cada zona con el color del piso más alto, y contornos punteados para los pisos superiores. |
 | 🧲 **Cotas sin solapes** | Cada etiqueta busca un hueco libre y, si se aleja, se une a su lado con una línea guía. |
 | 🏷️ **Etiqueta afuera y movible** | El identificador va fuera de la construcción, unido a ella con una línea guía, sin tapar cotas. En la vista previa se puede arrastrar, y la imagen exportada conserva la posición. |
@@ -112,13 +115,13 @@ Descargue el archivo de su sistema desde **[la última versión](https://github.
 
 ```mermaid
 flowchart LR
-    A["📂 <b>1. Abrir</b><br/>.shp · .zip · .gdb"] --> B["🧩 <b>2. Revisar campos</b><br/>identificador y pisos"]
+    A["📂 <b>1. Abrir</b><br/>.shp · .zip · .gdb"] --> B["🧩 <b>2. Revisar campos</b><br/>identificador, pisos y uso"]
     B --> C["📐 <b>3. Generar</b><br/>vista previa con zoom<br/>y etiquetas movibles"]
     C --> D["💾 <b>Exportar</b><br/>PNG · JPG · PDF · SVG"]
 ```
 
 1. **Abrir archivo…** o **Abrir carpeta GDB…**
-2. Revise el *identificador de la construcción* y el *número de pisos* (se detectan solos).
+2. Revise el *identificador de la construcción*, los *pisos* y el *uso* (se detectan solos).
 3. **Generar croquis**: si lo desea, arrastre la etiqueta naranja del identificador; luego
    **Exportar imagen…**
 
@@ -185,7 +188,7 @@ src/generador_croquis/
 ├── config.py               # Constantes y parámetros (tema del croquis, EPSG, URLs, créditos)
 ├── assets/                 # Logo, icono y fuentes Roboto (OFL)
 ├── domain/                 # MODELO: entidades inmutables, Version (SemVer) y excepciones
-├── data/                   # Fuentes de datos (Strategy por formato) y transporte HTTP
+├── data/                   # Fuentes de datos (Strategy por formato), dominios GDB y HTTP
 ├── services/               # Lógica de negocio: cotas, campos, agrupación, Markdown, ayuda, actualizaciones
 ├── rendering/              # Dibujo de croquis con matplotlib (sin pyplot)
 ├── controller/             # CONTROLADORES + protocolos de vista y del ejecutor de tareas

@@ -3,6 +3,10 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v2.6.0 | 2026-11-06 | Convenciones con el uso de cada piso (debajo del
+#          |            | piso y su área; usos largos en varias líneas). Con
+#          |            | campo de uso, la leyenda aparece aunque haya una
+#          |            | sola unidad.
 #   v2.5.0 | 2026-11-06 | La etiqueta del ID es una anotación: se coloca
 #          |            | fuera del polígono (después de las cotas, en el
 #          |            | hueco libre de línea más corta) con línea guía y
@@ -50,6 +54,7 @@ from __future__ import annotations
 
 import logging
 import math
+import textwrap
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -67,7 +72,7 @@ from matplotlib.ticker import MaxNLocator
 from shapely.geometry.base import BaseGeometry
 
 from generador_croquis.config import ParametrosCotas, TemaCroquis
-from generador_croquis.domain.models import Construccion, Lado, OpcionesAcotado
+from generador_croquis.domain.models import Construccion, GrupoPiso, Lado, OpcionesAcotado
 from generador_croquis.rendering.colocacion import ColocadorEtiquetas
 from generador_croquis.rendering.coordenadas import FormatoCoordenadas
 from generador_croquis.services.geometria import calcular_lados, poligonos_de
@@ -217,7 +222,7 @@ class RenderizadorMatplotlib:
                     cotas.append(_CotaPendiente(lado, borde))
                 else:  # lado de varias unidades: una sola cota, con el color del piso más alto
                     comun.color = borde  # (las partes llegan de abajo hacia arriba)
-        if c.num_partes > 1 or c.pisos_por_ubicacion:
+        if c.num_partes > 1 or c.pisos_por_ubicacion or c.con_uso:
             self._dibujar_convenciones(ax, c, colores, encima, cotas)
         etiqueta = self._dibujar_etiqueta(ax, c)
         self._configurar_ejes(ax, c)
@@ -267,6 +272,13 @@ class RenderizadorMatplotlib:
             return (r + (1 - r) * claro, g + (1 - g) * claro, b + (1 - b) * claro, 1.0), 1.0
         return to_rgba(color), t.alfa_relleno
 
+    def _texto_convencion(self, grupo: GrupoPiso) -> str:
+        """«Piso 1 · 120.00 m²» y debajo sus usos, partidos si son largos."""
+        lineas = [grupo.etiqueta]
+        for uso in grupo.usos:
+            lineas.extend(textwrap.wrap(uso, self._tema.largo_maximo_uso) or [uso])
+        return "\n".join(lineas)
+
     def _dibujar_convenciones(
         self,
         ax: Axes,
@@ -287,7 +299,7 @@ class RenderizadorMatplotlib:
                     edgecolor=borde,
                     linewidth=t.ancho_borde_superior if superior else t.ancho_borde,
                     linestyle=t.estilo_superior if superior else "-",
-                    label=grupo.etiqueta,
+                    label=self._texto_convencion(grupo),
                 )
             )
         leyenda = ax.legend(

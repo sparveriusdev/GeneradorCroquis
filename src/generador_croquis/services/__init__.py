@@ -3,6 +3,7 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.4.0 | 2026-11-06 | Exporta detectar_campo_uso.
 #   v1.3.0 | 2026-11-05 | Exporta detectar_significado_pisos.
 #   v1.2.0 | 2026-11-05 | calcular_lados / indices_principales reemplazan a
 #          |            | calcular_cotas.
@@ -17,6 +18,7 @@ from generador_croquis.services.deteccion_campos import (
     detectar_campo,
     detectar_campo_id,
     detectar_campo_pisos,
+    detectar_campo_uso,
     detectar_significado_pisos,
 )
 from generador_croquis.services.geometria import (
@@ -35,6 +37,7 @@ __all__ = [
     "detectar_campo",
     "detectar_campo_id",
     "detectar_campo_pisos",
+    "detectar_campo_uso",
     "detectar_significado_pisos",
     "indices_principales",
     "poligonos_de",

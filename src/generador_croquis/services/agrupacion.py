@@ -3,6 +3,8 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.3.0 | 2026-11-06 | Uso de cada parte (campo_uso), traducido con el
+#          |            | dominio de la capa y en el mismo orden que las partes.
 #   v1.2.0 | 2026-11-05 | Transmite el significado del campo de pisos.
 #   v1.1.0 | 2026-11-05 | Guarda el piso de cada parte y ordena las partes
 #          |            | de abajo hacia arriba (colores fijos por piso).
@@ -37,6 +39,7 @@ def agrupar_construcciones(capa: CapaCargada, seleccion: SeleccionCampos) -> lis
     gdf = capa.gdf
     campo_id = seleccion.campo_id if seleccion.campo_id in gdf.columns else None
     campo_pisos = seleccion.campo_pisos if seleccion.campo_pisos in gdf.columns else None
+    campo_uso = seleccion.campo_uso if seleccion.campo_uso in gdf.columns else None
 
     if campo_id:
         claves = gdf[campo_id].astype("string").fillna(ID_VACIO)
@@ -46,6 +49,9 @@ def agrupar_construcciones(capa: CapaCargada, seleccion: SeleccionCampos) -> lis
     construcciones = []
     for clave, grupo in gdf.groupby(claves, sort=True):
         partes = list(grupo.geometry)
+        usos: list[str | None] = (
+            [capa.texto_valor(campo_uso, v) for v in grupo[campo_uso]] if campo_uso else []
+        )
         pisos_partes: list[int | None] = []
         if campo_pisos:
             pisos_partes = [_piso(v) for v in grupo[campo_pisos]]
@@ -55,6 +61,7 @@ def agrupar_construcciones(capa: CapaCargada, seleccion: SeleccionCampos) -> lis
             )
             partes = [partes[i] for i in orden]
             pisos_partes = [pisos_partes[i] for i in orden]
+            usos = [usos[i] for i in orden] if usos else []
         construcciones.append(
             Construccion(
                 identificador=str(clave),
@@ -62,6 +69,7 @@ def agrupar_construcciones(capa: CapaCargada, seleccion: SeleccionCampos) -> lis
                 pisos=_pisos(grupo[campo_pisos]) if campo_pisos else None,
                 pisos_partes=tuple(pisos_partes),
                 significado_pisos=seleccion.significado_pisos,
+                usos_partes=tuple(usos),
             )
         )
     if not campo_id:

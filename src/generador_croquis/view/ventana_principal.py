@@ -3,6 +3,8 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v2.3.0 | 2026-11-06 | Selector «Uso» (opcional): el uso de cada unidad
+#          |            | aparece en las convenciones.
 #   v2.2.0 | 2026-11-05 | Opción «El campo indica: piso de la unidad / total
 #          |            | de pisos», propuesta al elegir el campo de pisos.
 #   v2.1.0 | 2026-11-05 | Página Generador desplazable (pantallas bajas); el
@@ -100,6 +102,7 @@ class VentanaPrincipal:
         self.ruta_archivo = tk.StringVar(value=SIN_ARCHIVO)
         self.campo_id = tk.StringVar()
         self.campo_pisos = tk.StringVar()
+        self.campo_uso = tk.StringVar()
         self.significado_pisos = tk.StringVar(value=SignificadoPisos.TOTAL.value)
         self.solo_principales = tk.BooleanVar(value=True)
         self.tolerancia = tk.StringVar(value=f"{TOLERANCIA_PRINCIPALES:.2f}")
@@ -194,7 +197,7 @@ class VentanaPrincipal:
         campos = Tarjeta(
             pagina,
             "2  Campos de la capa",
-            "Indique cómo se agrupan los polígonos y de dónde sale el número de pisos.",
+            "Indique cómo se agrupan los polígonos, de dónde salen los pisos y el uso.",
         )
         campos.grid(row=1, column=0, sticky="nsew", padx=(0, 16))
         campos.cuerpo.columnconfigure(0, weight=1)
@@ -217,7 +220,15 @@ class VentanaPrincipal:
         self.selector_pisos.grid(row=1, column=0, sticky="ew")
         self.selector_pisos.combo.bind("<<ComboboxSelected>>", self._al_cambiar_campo_pisos)
         self._fila_significado(campos.cuerpo).grid(row=2, column=0, sticky="ew", pady=(6, 0))
-        self._seccion_acotado(campos.cuerpo).grid(row=3, column=0, sticky="ew", pady=(12, 0))
+        self.selector_uso = CampoSeleccion(
+            campos.cuerpo,
+            "Uso",
+            "Uso de cada unidad (p. ej. USO). Se muestra en las convenciones de cada piso; "
+            "en una GDB, con la descripción de su dominio.",
+            self.campo_uso,
+        )
+        self.selector_uso.grid(row=3, column=0, sticky="ew", pady=(12, 0))
+        self._seccion_acotado(campos.cuerpo).grid(row=4, column=0, sticky="ew", pady=(12, 0))
 
         # Resumen
         resumen = Tarjeta(pagina, "Resumen de la capa")
@@ -360,6 +371,7 @@ class VentanaPrincipal:
                 self.solo_principales.get(),
                 self.tolerancia.get(),
                 self.significado_pisos.get(),
+                self.campo_uso.get(),
             )
 
     def _guardar(self) -> None:
@@ -412,12 +424,16 @@ class VentanaPrincipal:
         campo_pisos: str | None,
         nota_id: str,
         nota_pisos: str,
+        campo_uso: str | None = None,
+        nota_uso: str = "Opcional",
     ) -> None:
         valores = [OPCION_NINGUNO, *campos]
         self.selector_id.configurar(valores, nota_id, campo_id is not None)
         self.selector_pisos.configurar(valores, nota_pisos, campo_pisos is not None)
+        self.selector_uso.configurar(valores, nota_uso, campo_uso is not None)
         self.campo_id.set(campo_id or OPCION_NINGUNO)
         self.campo_pisos.set(campo_pisos or OPCION_NINGUNO)
+        self.campo_uso.set(campo_uso or OPCION_NINGUNO)
 
     def mostrar_significado_pisos(self, significado: SignificadoPisos, habilitado: bool) -> None:
         self.significado_pisos.set(significado.value)

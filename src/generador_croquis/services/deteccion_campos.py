@@ -3,6 +3,7 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.2.0 | 2026-11-06 | detectar_campo_uso() (USO, destino…).
 #   v1.1.0 | 2026-11-05 | detectar_significado_pisos(): por el nombre del
 #          |            | campo decide si indica el piso de la unidad
 #          |            | (PLANTA_UBICACION) o el total de pisos (NUMERO_PISOS).
@@ -19,7 +20,11 @@ from __future__ import annotations
 import re
 from collections.abc import Iterable, Sequence
 
-from generador_croquis.config import CANDIDATOS_CAMPO_ID, CANDIDATOS_CAMPO_PISOS
+from generador_croquis.config import (
+    CANDIDATOS_CAMPO_ID,
+    CANDIDATOS_CAMPO_PISOS,
+    CANDIDATOS_CAMPO_USO,
+)
 from generador_croquis.domain.models import SignificadoPisos
 
 _LONGITUD_MINIMA_SUBCADENA = 4
@@ -60,6 +65,10 @@ def detectar_campo_id(columnas: Iterable[str]) -> str | None:
 
 def detectar_campo_pisos(columnas: Iterable[str]) -> str | None:
     return detectar_campo(columnas, CANDIDATOS_CAMPO_PISOS)
+
+
+def detectar_campo_uso(columnas: Iterable[str]) -> str | None:
+    return detectar_campo(columnas, CANDIDATOS_CAMPO_USO)
 
 
 # Palabras que delatan cada significado del campo de pisos (se comparan por palabra).

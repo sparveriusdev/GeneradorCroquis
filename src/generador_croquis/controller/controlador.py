@@ -3,6 +3,8 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.4.0 | 2026-11-06 | Campo de uso: se sugiere al cargar y se pasa en
+#          |            | SeleccionCampos al generar (convenciones con uso).
 #   v1.3.0 | 2026-11-05 | Significado del campo de pisos: se detecta al cargar
 #          |            | y al cambiar el campo (cambiar_campo_pisos) y llega
 #          |            | a generar().
@@ -121,6 +123,7 @@ class ControladorCroquis:
         solo_principales: bool = True,
         tolerancia: str | float = TOLERANCIA_PRINCIPALES,
         significado_pisos: str | SignificadoPisos = SignificadoPisos.TOTAL,
+        campo_uso: str | None = None,
     ) -> None:
         capa = self.estado.capa
         if capa is None:
@@ -136,6 +139,7 @@ class ControladorCroquis:
             _normalizar_campo(campo_id),
             _normalizar_campo(campo_pisos),
             SignificadoPisos(significado_pisos),
+            _normalizar_campo(campo_uso),
         )
         n = self._servicio.requiere_confirmacion(capa, seleccion)
         if n is not None and not self._vista.confirmar(
@@ -197,7 +201,11 @@ class ControladorCroquis:
         id_sug, pisos_sug = resumen.campo_id_sugerido, resumen.campo_pisos_sugerido
         nota_id = "Detectado automáticamente" if id_sug else "Elíjalo manualmente"
         nota_pisos = "Detectado automáticamente" if pisos_sug else "Opcional"
-        self._vista.configurar_campos(capa.campos, id_sug, pisos_sug, nota_id, nota_pisos)
+        uso_sug = resumen.campo_uso_sugerido
+        nota_uso = "Detectado automáticamente" if uso_sug else "Opcional"
+        self._vista.configurar_campos(
+            capa.campos, id_sug, pisos_sug, nota_id, nota_pisos, uso_sug, nota_uso
+        )
         self.cambiar_campo_pisos(pisos_sug)
         self._vista.mostrar_resumen(resumen.filas(), list(capa.avisos))
         self._vista.habilitar_generar(True)

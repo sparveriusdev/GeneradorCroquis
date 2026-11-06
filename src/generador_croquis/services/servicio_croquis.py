@@ -3,6 +3,7 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.2.0 | 2026-11-06 | Sugiere el campo de uso al cargar la capa.
 #   v1.1.0 | 2026-11-05 | generar_figura() recibe OpcionesAcotado e informa
 #          |            | cuántas cotas no encontraron espacio libre.
 #   v1.0.0 | 2026-11-05 | Creación. Fachada de casos de uso (cargar capa,
@@ -27,7 +28,11 @@ from generador_croquis.domain.models import (
     SeleccionCampos,
 )
 from generador_croquis.services.agrupacion import agrupar_construcciones
-from generador_croquis.services.deteccion_campos import detectar_campo_id, detectar_campo_pisos
+from generador_croquis.services.deteccion_campos import (
+    detectar_campo_id,
+    detectar_campo_pisos,
+    detectar_campo_uso,
+)
 from generador_croquis.services.preparacion import preparar_capa
 
 if TYPE_CHECKING:
@@ -57,6 +62,7 @@ class ServicioCroquis:
             capa=capa,
             campo_id_sugerido=detectar_campo_id(capa.campos),
             campo_pisos_sugerido=detectar_campo_pisos(capa.campos),
+            campo_uso_sugerido=detectar_campo_uso(capa.campos),
         )
 
     def requiere_confirmacion(self, capa: CapaCargada, seleccion: SeleccionCampos) -> int | None:

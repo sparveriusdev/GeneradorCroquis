@@ -55,8 +55,11 @@ class VistaFalsa:
     def seleccionar_opcion(self, titulo, mensaje, opciones):
         return opciones[0]
 
-    def configurar_campos(self, campos, campo_id, campo_pisos, nota_id, nota_pisos):
+    def configurar_campos(
+        self, campos, campo_id, campo_pisos, nota_id, nota_pisos, campo_uso=None, nota_uso=""
+    ):
         self.eventos.append(("campos", campo_id, campo_pisos, nota_id))
+        self.campo_uso = campo_uso
 
     def mostrar_significado_pisos(self, significado, habilitado):
         self.eventos.append(("significado", significado.value, habilitado))

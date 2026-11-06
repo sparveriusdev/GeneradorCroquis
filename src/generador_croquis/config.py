@@ -3,6 +3,8 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.9.0 | 2026-11-06 | Candidatos del campo de uso y largo máximo de las
+#          |            | líneas de uso en las convenciones.
 #   v1.8.0 | 2026-11-06 | Etiqueta del ID fuera del polígono: opacidad del
 #          |            | recuadro y tamaño del punto de la línea guía.
 #   v1.7.0 | 2026-11-05 | Modo de superposición (vista_superior/transparente),
@@ -112,6 +114,17 @@ CANDIDATOS_CAMPO_PISOS: tuple[str, ...] = (
     "altura",
 )
 
+CANDIDATOS_CAMPO_USO: tuple[str, ...] = (
+    "uso",
+    "uso_construccion",
+    "uso_unidad",
+    "usos",
+    "destino",
+    "destinacion",
+    "use",
+    "land_use",
+)
+
 # ── GitHub / actualizaciones ────────────────────────────────────────────────
 REPO_GITHUB: str = "sparveriusdev/GeneradorCroquis"
 URL_REPOSITORIO: str = f"https://github.com/{REPO_GITHUB}"
@@ -215,6 +228,7 @@ class TemaCroquis:
     tamano_fuente_cota: float = 6.5
     tamano_fuente_etiqueta: float = 7.0
     largo_maximo_etiqueta: int = 15  # códigos más largos se parten en varias líneas
+    largo_maximo_uso: int = 40  # usos más largos se parten en varias líneas (convenciones)
     alfa_etiqueta: float = 0.85  # recuadro de la etiqueta del ID (va fuera del polígono)
     tamano_punto_etiqueta: float = 2.5  # punto donde termina su línea guía
     tamano_subplot_pulgadas: float = 6.0

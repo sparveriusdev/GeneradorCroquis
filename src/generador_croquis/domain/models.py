@@ -3,6 +3,11 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.6.0 | 2026-11-06 | Uso de cada unidad: SeleccionCampos.campo_uso,
+#          |            | Construccion.usos_partes, GrupoPiso.usos;
+#          |            | CapaCargada guarda los dominios codificados y
+#          |            | traduce códigos a descripciones (texto_valor).
+#          |            | ResumenCapa sugiere el campo de uso.
 #   v1.5.0 | 2026-11-05 | SignificadoPisos (piso de la unidad / total de
 #          |            | pisos) en SeleccionCampos, Construccion y GrupoPiso:
 #          |            | textos «Piso 2» o «2 pisos» según el caso.
@@ -28,6 +33,8 @@
 
 from __future__ import annotations
 
+import math
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import StrEnum
 from functools import cached_property
@@ -123,6 +130,19 @@ class Construccion:
     # Piso de cada parte (mismo orden que ``partes``); vacío si no se conoce.
     pisos_partes: tuple[int | None, ...] = ()
     significado_pisos: SignificadoPisos = SignificadoPisos.TOTAL
+    # Uso de cada parte (mismo orden que ``partes``), ya en texto legible; vacío si no hay.
+    usos_partes: tuple[str | None, ...] = ()
+
+    @property
+    def con_uso(self) -> bool:
+        return any(u for u in self.usos_partes)
+
+    def uso_de(self, indice: int) -> str | None:
+        return self.usos_partes[indice] if self.usos_partes else None
+
+    def _usos(self, indices: tuple[int, ...]) -> tuple[str, ...]:
+        """Usos distintos de esas partes, en orden de aparición."""
+        return tuple(dict.fromkeys(u for i in indices if (u := self.uso_de(i))))
 
     @property
     def pisos_por_ubicacion(self) -> bool:
@@ -134,6 +154,8 @@ class Construccion:
     def __post_init__(self) -> None:
         if self.pisos_partes and len(self.pisos_partes) != len(self.partes):
             raise ValueError("pisos_partes debe tener un valor por cada parte")
+        if self.usos_partes and len(self.usos_partes) != len(self.partes):
+            raise ValueError("usos_partes debe tener un valor por cada parte")
 
     @property
     def num_partes(self) -> int:
@@ -149,7 +171,8 @@ class Construccion:
         """
         if not any(p is not None for p in self.pisos_partes):
             return [
-                GrupoPiso(None, (i,), self.partes[i].area, i + 1) for i in range(self.num_partes)
+                GrupoPiso(None, (i,), self.partes[i].area, i + 1, usos=self._usos((i,)))
+                for i in range(self.num_partes)
             ]
         grupos: dict[int | None, list[int]] = {}
         for i in range(self.num_partes):
@@ -162,6 +185,7 @@ class Construccion:
                 sum(self.partes[i].area for i in grupos[piso]),
                 n + 1,
                 self.significado_pisos,
+                self._usos(tuple(grupos[piso])),
             )
             for n, piso in enumerate(orden)
         ]
@@ -200,6 +224,7 @@ class GrupoPiso:
     area: float
     orden: int  # posición 1, 2, 3… de abajo hacia arriba
     significado: SignificadoPisos = SignificadoPisos.UBICACION
+    usos: tuple[str, ...] = ()  # usos distintos de sus unidades (ya legibles)
 
     @property
     def etiqueta(self) -> str:
@@ -213,11 +238,30 @@ class GrupoPiso:
 
 @dataclass(frozen=True)
 class SeleccionCampos:
-    """Campos de la capa elegidos por el usuario para agrupar y leer pisos."""
+    """Campos de la capa elegidos por el usuario: agrupación, pisos y uso."""
 
     campo_id: str | None = None
     campo_pisos: str | None = None
     significado_pisos: SignificadoPisos = SignificadoPisos.TOTAL
+    campo_uso: str | None = None
+
+
+def codigo_texto(valor: object) -> str | None:
+    """Valor de un atributo como texto: ``11.0`` → ``"11"``; vacío o nulo → None."""
+    if valor is None:
+        return None
+    if isinstance(valor, float):
+        if math.isnan(valor):
+            return None
+        if valor.is_integer():
+            return str(int(valor))
+    try:  # pandas.NA y similares
+        if valor != valor:  # NaN no es igual a sí mismo
+            return None
+    except (TypeError, ValueError):
+        return None
+    texto = str(valor).strip()
+    return texto or None
 
 
 @dataclass(frozen=True)
@@ -227,6 +271,15 @@ class CapaCargada:
     gdf: gpd.GeoDataFrame
     nombre: str
     avisos: tuple[str, ...] = field(default_factory=tuple)
+    # Dominios codificados de la fuente: campo → (código → descripción).
+    dominios: Mapping[str, Mapping[str, str]] = field(default_factory=dict)
+
+    def texto_valor(self, campo: str, valor: object) -> str | None:
+        """Texto legible de un valor: la descripción del dominio si existe, si no el valor."""
+        codigo = codigo_texto(valor)
+        if codigo is None:
+            return None
+        return self.dominios.get(campo, {}).get(codigo, codigo)
 
     @property
     def campos(self) -> list[str]:
@@ -250,6 +303,7 @@ class ResumenCapa:
     capa: CapaCargada
     campo_id_sugerido: str | None
     campo_pisos_sugerido: str | None
+    campo_uso_sugerido: str | None = None
 
     COLUMNAS_VISIBLES = 6
 

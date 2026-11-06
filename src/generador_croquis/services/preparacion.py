@@ -3,6 +3,7 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.1.0 | 2026-11-06 | Pasa a CapaCargada los dominios codificados de la fuente.
 #   v1.0.0 | 2026-11-05 | Creación. Migrado desde preparar_gdf(): limpieza de
 #          |            | geometrías y reproyección a metros; devuelve la
 #          |            | entidad CapaCargada.
@@ -43,4 +44,6 @@ def preparar_capa(lectura: LecturaFuente, epsg_metros: int = EPSG_METROS) -> Cap
             f"EPSG:{epsg_metros} para obtener cotas en metros."
         )
 
-    return CapaCargada(gdf=gdf, nombre=lectura.nombre, avisos=tuple(avisos))
+    return CapaCargada(
+        gdf=gdf, nombre=lectura.nombre, avisos=tuple(avisos), dominios=lectura.dominios
+    )
