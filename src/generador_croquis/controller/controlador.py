@@ -3,6 +3,10 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.5.0 | 2026-11-20 | Informalidades: al cargar se informan a la vista
+#          |            | (mostrar_informalidades) y generar() recibe si se
+#          |            | dibuja su croquis adicional. El estado cuenta los
+#          |            | croquis realmente dibujados.
 #   v1.4.0 | 2026-11-06 | Campo de uso: se sugiere al cargar y se pasa en
 #          |            | SeleccionCampos al generar (convenciones con uso).
 #   v1.3.0 | 2026-11-05 | Significado del campo de pisos: se detecta al cargar
@@ -81,6 +85,16 @@ def _plural(n: int, singular: str, plural: str) -> str:
     return f"{n} {singular if n == 1 else plural}"
 
 
+def _detalle_informalidades(capa: CapaCargada) -> str:
+    if not capa.num_informales:
+        return "Esta capa no tiene."
+    predios = ", ".join(capa.nombres_predios_informales)
+    return (
+        f"{_plural(capa.num_informales, 'polígono informal', 'polígonos informales')} "
+        f"(predio {predios}, según «{capa.campo_npn}»)."
+    )
+
+
 class ControladorCroquis:
     """Recibe eventos de la vista, invoca casos de uso y actualiza la vista."""
 
@@ -103,6 +117,7 @@ class ControladorCroquis:
         self.estado.resumen = None
         self._descartar_figura()
         self._vista.mostrar_resumen([], [])
+        self._vista.mostrar_informalidades(0, "")
         self._vista.habilitar_generar(False)
 
     def cambiar_agrupacion(self, campo_id: str | None) -> None:
@@ -124,6 +139,7 @@ class ControladorCroquis:
         tolerancia: str | float = TOLERANCIA_PRINCIPALES,
         significado_pisos: str | SignificadoPisos = SignificadoPisos.TOTAL,
         campo_uso: str | None = None,
+        incluir_informales: bool = False,
     ) -> None:
         capa = self.estado.capa
         if capa is None:
@@ -140,6 +156,7 @@ class ControladorCroquis:
             _normalizar_campo(campo_pisos),
             SignificadoPisos(significado_pisos),
             _normalizar_campo(campo_uso),
+            bool(incluir_informales) and capa.num_informales > 0,
         )
         n = self._servicio.requiere_confirmacion(capa, seleccion)
         if n is not None and not self._vista.confirmar(
@@ -155,11 +172,12 @@ class ControladorCroquis:
             self.estado.figura = self._servicio.generar_figura(capa, seleccion, opciones)
             self._vista.mostrar_figura(self.estado.figura)
             self._vista.habilitar_guardar(True)
-            total = capa.contar_construcciones(seleccion.campo_id)
-            mensaje = (
-                f"Listo: {_plural(total, 'croquis generado', 'croquis generados')}. "
-                "Use «Exportar imagen» para guardarlos."
-            )
+            total = self._servicio.croquis_generados
+            mensaje = f"Listo: {_plural(total, 'croquis generado', 'croquis generados')}"
+            if seleccion.incluir_informales:
+                adicionales = total - capa.contar_construcciones(seleccion.campo_id, False)
+                mensaje += f" ({adicionales} de informalidades)"
+            mensaje += ". Use «Exportar imagen» para guardarlos."
             sin_espacio = self._servicio.cotas_sin_espacio
             if sin_espacio:
                 mensaje += (
@@ -207,6 +225,7 @@ class ControladorCroquis:
             capa.campos, id_sug, pisos_sug, nota_id, nota_pisos, uso_sug, nota_uso
         )
         self.cambiar_campo_pisos(pisos_sug)
+        self._vista.mostrar_informalidades(capa.num_informales, _detalle_informalidades(capa))
         self._vista.mostrar_resumen(resumen.filas(), list(capa.avisos))
         self._vista.habilitar_generar(True)
         self._vista.mostrar_estado(

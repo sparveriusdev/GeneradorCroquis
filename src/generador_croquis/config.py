@@ -3,6 +3,10 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.10.0 | 2026-11-20 | Informalidades: candidatos del campo NPN, distancia
+#           |            | de la construcción formal de referencia y su estilo.
+#           |            | Pisos: PLANTA_UBICACION primero y ALTURA solo como
+#           |            | último recurso (es la altura en metros).
 #   v1.9.0 | 2026-11-06 | Candidatos del campo de uso y largo máximo de las
 #          |            | líneas de uso en las convenciones.
 #   v1.8.0 | 2026-11-06 | Etiqueta del ID fuera del polígono: opacidad del
@@ -97,6 +101,7 @@ CANDIDATOS_CAMPO_ID: tuple[str, ...] = (
 )
 
 CANDIDATOS_CAMPO_PISOS: tuple[str, ...] = (
+    "planta_ubicacion",
     "pisos",
     "piso",
     "niveles",
@@ -111,8 +116,9 @@ CANDIDATOS_CAMPO_PISOS: tuple[str, ...] = (
     "planta",
     "npisos",
     "npiso",
-    "altura",
 )
+# Solo si ningún candidato coincide: la altura suele estar en metros, no en pisos.
+CANDIDATOS_CAMPO_PISOS_RESPALDO: tuple[str, ...] = ("altura",)
 
 CANDIDATOS_CAMPO_USO: tuple[str, ...] = (
     "uso",
@@ -124,6 +130,23 @@ CANDIDATOS_CAMPO_USO: tuple[str, ...] = (
     "use",
     "land_use",
 )
+
+# Campos con el número predial nacional (NPN, 30 caracteres), en orden de prioridad.
+# Además se revisa el contenido: se usa el primero cuyos valores tengan forma de NPN.
+CANDIDATOS_CAMPO_NPN: tuple[str, ...] = (
+    "codigo_unidad_construccion",
+    "codigo_construccion",
+    "terreno_codigo",
+    "codigo_terreno",
+    "numero_predial",
+    "npn",
+    "codigo_predial",
+    "codigo",
+)
+
+# Construcciones formales a menos de esta distancia (m) de una informalidad se dibujan en
+# gris, como referencia, en su croquis adicional.
+DISTANCIA_REFERENCIA_INFORMAL: float = 50.0
 
 # ── GitHub / actualizaciones ────────────────────────────────────────────────
 REPO_GITHUB: str = "sparveriusdev/GeneradorCroquis"
@@ -228,6 +251,8 @@ class TemaCroquis:
     tamano_fuente_cota: float = 6.5
     tamano_fuente_etiqueta: float = 7.0
     largo_maximo_etiqueta: int = 15  # códigos más largos se parten en varias líneas
+    color_referencia: str = "#9E9E9E"  # construcción formal bajo una informalidad
+    relleno_referencia: str = "#EEEEEE"
     largo_maximo_uso: int = 40  # usos más largos se parten en varias líneas (convenciones)
     alfa_etiqueta: float = 0.85  # recuadro de la etiqueta del ID (va fuera del polígono)
     tamano_punto_etiqueta: float = 2.5  # punto donde termina su línea guía

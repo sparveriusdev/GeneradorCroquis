@@ -3,6 +3,7 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.5.0 | 2026-11-20 | Exporta detectar_campo_npn.
 #   v1.4.0 | 2026-11-06 | Exporta detectar_campo_uso.
 #   v1.3.0 | 2026-11-05 | Exporta detectar_significado_pisos.
 #   v1.2.0 | 2026-11-05 | calcular_lados / indices_principales reemplazan a
@@ -17,6 +18,7 @@ from generador_croquis.services.agrupacion import agrupar_construcciones
 from generador_croquis.services.deteccion_campos import (
     detectar_campo,
     detectar_campo_id,
+    detectar_campo_npn,
     detectar_campo_pisos,
     detectar_campo_uso,
     detectar_significado_pisos,
@@ -36,6 +38,7 @@ __all__ = [
     "calcular_lados",
     "detectar_campo",
     "detectar_campo_id",
+    "detectar_campo_npn",
     "detectar_campo_pisos",
     "detectar_campo_uso",
     "detectar_significado_pisos",

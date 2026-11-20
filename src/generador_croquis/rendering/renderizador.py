@@ -3,6 +3,11 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v2.7.0 | 2026-11-20 | Croquis de informalidades: título «Informalidad
+#          |            | P001», construcción formal cercana en gris (sin
+#          |            | cotas, con su entrada en las convenciones) y la
+#          |            | etiqueta del ID fuera de ambas. El encuadre incluye
+#          |            | la referencia.
 #   v2.6.0 | 2026-11-06 | Convenciones con el uso de cada piso (debajo del
 #          |            | piso y su área; usos largos en varias líneas). Con
 #          |            | campo de uso, la leyenda aparece aunque haya una
@@ -69,7 +74,7 @@ from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 from matplotlib.text import Annotation, Text
 from matplotlib.ticker import MaxNLocator
-from shapely.geometry.base import BaseGeometry
+from shapely.ops import unary_union
 
 from generador_croquis.config import ParametrosCotas, TemaCroquis
 from generador_croquis.domain.models import Construccion, GrupoPiso, Lado, OpcionesAcotado
@@ -120,8 +125,8 @@ class RenderizadorMatplotlib:
         self._tema = tema or TemaCroquis()
         self._cotas = cotas or ParametrosCotas()
         self._tamanos: WeakKeyDictionary[Figure, tuple[float, ...]] = WeakKeyDictionary()
-        # Etiqueta del ID -> (geometría de su construcción, punto donde acaba la línea guía).
-        self._anclas: WeakKeyDictionary[Annotation, tuple[BaseGeometry, Line2D]] = (
+        # Etiqueta del ID -> (su construcción, punto donde acaba la línea guía).
+        self._anclas: WeakKeyDictionary[Annotation, tuple[Construccion, Line2D]] = (
             WeakKeyDictionary()
         )
         self.cotas_sin_espacio = 0  # informe de la última figura
@@ -167,8 +172,9 @@ class RenderizadorMatplotlib:
                 colocador.colocar(cota.lado, self._crear_texto(ax, cota))
             self.cotas_sin_espacio += colocador.sin_espacio
             if etiqueta_id is not None:
-                zona, ancla = self._anclas[etiqueta_id]
-                if colocador.colocar_fuera(etiqueta_id, zona):
+                c, ancla = self._anclas[etiqueta_id]
+                referencia = unary_union(list(c.referencia)) if c.referencia else None
+                if colocador.colocar_fuera(etiqueta_id, c.union, referencia):
                     ancla.set_data([etiqueta_id.xy[0]], [etiqueta_id.xy[1]])
                 else:
                     log.info("La etiqueta %r queda dentro del polígono", etiqueta_id.get_text())
@@ -202,6 +208,7 @@ class RenderizadorMatplotlib:
             ax.axis("off")
             return None, []
         cotas: list[_CotaPendiente] = []
+        self._dibujar_referencia(ax, c)
         colores = self._colores_por_parte(c)
         encima = self._encima_por_parte(c)
         niveles = {i: g.orden for g in c.grupos_por_piso() for i in g.indices}
@@ -222,11 +229,20 @@ class RenderizadorMatplotlib:
                     cotas.append(_CotaPendiente(lado, borde))
                 else:  # lado de varias unidades: una sola cota, con el color del piso más alto
                     comun.color = borde  # (las partes llegan de abajo hacia arriba)
-        if c.num_partes > 1 or c.pisos_por_ubicacion or c.con_uso:
+        if c.num_partes > 1 or c.pisos_por_ubicacion or c.con_uso or c.referencia:
             self._dibujar_convenciones(ax, c, colores, encima, cotas)
         etiqueta = self._dibujar_etiqueta(ax, c)
         self._configurar_ejes(ax, c)
         return etiqueta, cotas
+
+    def _dibujar_referencia(self, ax: Axes, c: Construccion) -> None:
+        """Construcción formal bajo una informalidad: en gris, debajo de todo y sin cotas."""
+        t = self._tema
+        for poly in c.referencia:
+            for parte in poligonos_de(poly):
+                xs, ys = parte.exterior.xy
+                ax.fill(xs, ys, color=t.relleno_referencia, linewidth=0, zorder=0.5)
+                ax.plot(xs, ys, color=t.color_referencia, linewidth=1.0, zorder=0.6)
 
     def _colores_por_parte(self, c: Construccion) -> list[tuple[str, str]]:
         """(borde, relleno) de cada parte: fijo por piso (piso 1 siempre el primer color).
@@ -300,6 +316,15 @@ class RenderizadorMatplotlib:
                     linewidth=t.ancho_borde_superior if superior else t.ancho_borde,
                     linestyle=t.estilo_superior if superior else "-",
                     label=self._texto_convencion(grupo),
+                )
+            )
+        if c.referencia:
+            elementos.append(
+                Patch(
+                    facecolor=t.relleno_referencia,
+                    edgecolor=t.color_referencia,
+                    linewidth=1.0,
+                    label="Formal de referencia\n(sin cotas)",
                 )
             )
         leyenda = ax.legend(
@@ -439,7 +464,7 @@ class RenderizadorMatplotlib:
         )
         etiqueta.set_in_layout(False)
         etiqueta.draggable(True)
-        self._anclas[etiqueta] = (c.union, ancla)
+        self._anclas[etiqueta] = (c, ancla)
         return etiqueta
 
     def _configurar_ejes(self, ax: Axes, c: Construccion) -> None:
@@ -449,8 +474,15 @@ class RenderizadorMatplotlib:
             titulo.append(c.descripcion_pisos)
         if c.num_partes > 1:
             titulo.append(f"{c.num_partes} partes")
+        texto_titulo = "  |  ".join(titulo)
+        if c.es_informal:  # en su propia línea: el título no se sale del croquis
+            texto_titulo = f"INFORMALIDAD {c.predio_informal}\n{texto_titulo}"
         ax.set_title(
-            "  |  ".join(titulo), fontsize=9, fontweight="bold", color=t.color_subtitulo, pad=8
+            texto_titulo,
+            fontsize=9,
+            fontweight="bold",
+            color=t.color_etiqueta_borde if c.es_informal else t.color_subtitulo,
+            pad=8,
         )
         # El pie va como etiqueta del eje X: el ajuste automático lo deja bajo las coordenadas.
         ax.set_xlabel(
@@ -471,7 +503,7 @@ class RenderizadorMatplotlib:
             eje.set_major_locator(MaxNLocator(nbins=t.marcas_eje, steps=[1, 2, 5, 10]))
         ax.tick_params(axis="x", labelrotation=30)
 
-        minx, miny, maxx, maxy = c.union.bounds
+        minx, miny, maxx, maxy = c.extension.bounds
         mx = max((maxx - minx) * t.margen_relativo, t.margen_minimo)
         my = max((maxy - miny) * t.margen_relativo, t.margen_minimo)
         ax.set_xlim(minx - mx, maxx + mx)

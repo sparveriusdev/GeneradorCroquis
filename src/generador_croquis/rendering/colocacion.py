@@ -3,6 +3,9 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.3.0 | 2026-11-20 | colocar_fuera() acepta obstáculos adicionales (la
+#          |            | construcción formal de referencia de una
+#          |            | informalidad): la etiqueta tampoco se pone encima.
 #   v1.2.0 | 2026-11-06 | colocar_fuera() busca en una rejilla sobre todo el
 #          |            | croquis (no solo alrededor de su caja): cabe en
 #          |            | croquis pequeños o con leyenda ancha y puede usar
@@ -137,14 +140,17 @@ class ColocadorEtiquetas:
         self.sin_espacio += 1
         return False
 
-    def colocar_fuera(self, texto: Annotation, zona: BaseGeometry) -> bool:
+    def colocar_fuera(
+        self, texto: Annotation, zona: BaseGeometry, obstaculos: BaseGeometry | None = None
+    ) -> bool:
         """Lleva la etiqueta ``texto`` fuera de la construcción ``zona`` (en datos).
 
         Recorre una rejilla de posiciones sobre todo el croquis y, entre las libres (dentro del
         área, sin tocar etiquetas ya colocadas ni la construcción, patios incluidos), elige la
         más cercana a la construcción cuya línea guía no cruce otras etiquetas. La línea
         termina en el punto de ``zona`` más cercano, un poco hacia adentro. Si no hay hueco, la
-        deja donde estaba y devuelve False.
+        deja donde estaba y devuelve False. ``obstaculos`` (en datos) son otras zonas que la
+        etiqueta tampoco debe tapar.
         """
         datos_a_px = self._ax.transData
 
@@ -152,6 +158,8 @@ class ColocadorEtiquetas:
             return shapely.transform(geom, datos_a_px.transform)  # recibe un arreglo N×2
 
         poligonos = poligonos_de(zona) or [zona.envelope]
+        if obstaculos is not None:
+            poligonos += poligonos_de(obstaculos)
         silueta = a_px(unary_union([Polygon(p.exterior) for p in poligonos]))
         prohibida = silueta.buffer(DISTANCIA_MINIMA_PX)
         shapely.prepare(prohibida)

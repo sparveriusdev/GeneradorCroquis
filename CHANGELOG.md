@@ -4,6 +4,7 @@ Archivo  : CHANGELOG.md
 Proyecto : Generador de Croquis
 ------------------------------------------------------------------------------
 CHANGELOG (versión interna del documento)
+  v1.8.0 | 2026-11-20 | Añade la versión 1.5.0 (informalidades).
   v1.7.0 | 2026-11-06 | Añade la versión 1.4.0 (uso en las convenciones).
   v1.6.0 | 2026-11-06 | Añade la versión 1.3.0 (etiqueta del ID afuera).
   v1.5.0 | 2026-11-05 | Añade la versión 1.2.1 (vista desde arriba).
@@ -25,6 +26,30 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/)
 y versionado con [SemVer](https://semver.org/lang/es/).
 
 ## [Unreleased]
+
+## [1.5.0] - 2026-11-20
+
+Croquis adicional para las informalidades (predios informales sobre un predio formal).
+
+### Añadido
+- El programa detecta las **informalidades** por el número predial nacional (NPN): un `2` en
+  la **posición 22** (condición de propiedad) indica un predio informal. El campo del NPN se
+  reconoce solo, por su nombre (`CODIGO_UNIDAD_CONSTRUCCION`, `CODIGO_CONSTRUCCION`,
+  `TERRENO_CODIGO`…) o por su contenido (códigos de 30 caracteres).
+- Nueva sección **Informalidades** en *Campos de la capa*: la casilla **Generar croquis
+  adicional de informalidades** se activa (y se marca) solo si la capa las tiene. El
+  *Resumen de la capa* indica cuántos polígonos informales hay y su predio (p. ej. `P001`).
+- Cada informalidad tiene su propio croquis, en la misma lámina y después de los formales,
+  con el título **INFORMALIDAD P001**, sus cotas y convenciones, y la construcción formal
+  cercana (a menos de 50 m) en **gris, sin cotas**, como referencia de ubicación.
+
+### Corregido
+- Una unidad informal ya no se mezcla con una formal que tenga el mismo identificador (en
+  LADM-COL ambas suelen tener `IDENTIFICADOR = 1`): los croquis formales nunca incluyen las
+  informalidades.
+- El campo de pisos se detectaba como `ALTURA` (la altura en metros) en las capas de
+  unidades de construcción LADM-COL; ahora se propone `PLANTA_UBICACION` y `ALTURA` solo se
+  usa si no hay otro candidato.
 
 ## [1.4.0] - 2026-11-06
 

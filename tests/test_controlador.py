@@ -3,6 +3,7 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.4.0 | 2026-11-20 | La vista falsa implementa mostrar_informalidades.
 #   v1.3.0 | 2026-11-05 | Significado del campo de pisos (detección y envío).
 #   v1.2.0 | 2026-11-05 | Prueba de la tolerancia de acotado (coma decimal
 #          |            | y valores inválidos).
@@ -63,6 +64,9 @@ class VistaFalsa:
 
     def mostrar_significado_pisos(self, significado, habilitado):
         self.eventos.append(("significado", significado.value, habilitado))
+
+    def mostrar_informalidades(self, cantidad, detalle):
+        self.informalidades = (cantidad, detalle)
 
     def habilitar_generar(self, habilitado):
         self.generar_habilitado = habilitado

@@ -3,6 +3,8 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.3.0 | 2026-11-20 | detectar_campo_npn(): por nombre y contenido (forma
+#          |            | de NPN). Pisos: ALTURA solo como último recurso.
 #   v1.2.0 | 2026-11-06 | detectar_campo_uso() (USO, destino…).
 #   v1.1.0 | 2026-11-05 | detectar_significado_pisos(): por el nombre del
 #          |            | campo decide si indica el piso de la unidad
@@ -20,12 +22,17 @@ from __future__ import annotations
 import re
 from collections.abc import Iterable, Sequence
 
+import pandas as pd
+
 from generador_croquis.config import (
     CANDIDATOS_CAMPO_ID,
+    CANDIDATOS_CAMPO_NPN,
     CANDIDATOS_CAMPO_PISOS,
+    CANDIDATOS_CAMPO_PISOS_RESPALDO,
     CANDIDATOS_CAMPO_USO,
 )
 from generador_croquis.domain.models import SignificadoPisos
+from generador_croquis.domain.npn import es_npn
 
 _LONGITUD_MINIMA_SUBCADENA = 4
 
@@ -64,11 +71,41 @@ def detectar_campo_id(columnas: Iterable[str]) -> str | None:
 
 
 def detectar_campo_pisos(columnas: Iterable[str]) -> str | None:
-    return detectar_campo(columnas, CANDIDATOS_CAMPO_PISOS)
+    columnas = list(columnas)
+    return detectar_campo(columnas, CANDIDATOS_CAMPO_PISOS) or detectar_campo(
+        columnas, CANDIDATOS_CAMPO_PISOS_RESPALDO
+    )
 
 
 def detectar_campo_uso(columnas: Iterable[str]) -> str | None:
     return detectar_campo(columnas, CANDIDATOS_CAMPO_USO)
+
+
+# Fracción mínima de valores con forma de NPN para aceptar una columna como tal.
+_FRACCION_NPN = 0.9
+
+
+def _parece_npn(valores: pd.Series) -> bool:
+    texto = valores.dropna()
+    texto = texto[texto.map(lambda v: isinstance(v, str) and v.strip() != "")]
+    return not texto.empty and texto.map(es_npn).mean() >= _FRACCION_NPN
+
+
+def detectar_campo_npn(tabla: pd.DataFrame) -> str | None:
+    """Columna con el número predial nacional (NPN) o None.
+
+    Revisa primero los nombres conocidos (``CODIGO_UNIDAD_CONSTRUCCION``…) y luego el resto
+    de columnas de texto; acepta la primera cuyos valores tengan forma de NPN.
+    """
+    columnas = [
+        c for c in tabla.columns if c != "geometry" and pd.api.types.is_string_dtype(tabla[c])
+    ]
+    por_minuscula = {c.lower(): c for c in columnas}
+    conocidas = [por_minuscula[c] for c in CANDIDATOS_CAMPO_NPN if c in por_minuscula]
+    for columna in dict.fromkeys(conocidas + columnas):
+        if _parece_npn(tabla[columna]):
+            return columna
+    return None
 
 
 # Palabras que delatan cada significado del campo de pisos (se comparan por palabra).

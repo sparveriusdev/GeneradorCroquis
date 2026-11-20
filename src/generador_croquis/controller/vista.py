@@ -3,6 +3,8 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.4.0 | 2026-11-20 | mostrar_informalidades: habilita la opción del
+#          |            | croquis adicional cuando la capa tiene informalidades.
 #   v1.3.0 | 2026-11-06 | configurar_campos recibe el campo de uso sugerido.
 #   v1.2.0 | 2026-11-05 | mostrar_significado_pisos (piso de la unidad / total).
 #   v1.1.0 | 2026-11-05 | mostrar_info -> mostrar_estado (barra de estado) y
@@ -57,6 +59,10 @@ class VistaCroquis(Protocol):
     def mostrar_significado_pisos(
         self, significado: SignificadoPisos, habilitado: bool
     ) -> None: ...
+
+    def mostrar_informalidades(self, cantidad: int, detalle: str) -> None:
+        """Con ``cantidad`` > 0 ofrece el croquis adicional; con 0 lo desactiva."""
+        ...
 
     def habilitar_generar(self, habilitado: bool) -> None: ...
 

@@ -4,6 +4,9 @@ Archivo  : docs/MANUAL_DE_USO.md
 Proyecto : Generador de Croquis
 ------------------------------------------------------------------------------
 CHANGELOG (versión interna del documento)
+  v1.9.0 | 2026-11-20 | Versión 1.5.0: informalidades (posición 22 del
+         |            | NPN), croquis adicional y PLANTA_UBICACION como
+         |            | campo de pisos propuesto; imágenes nuevas.
   v1.8.0 | 2026-11-06 | Versión 1.4.0: campo «Uso» (opcional) con la
          |            | descripción del dominio de la GDB en las
          |            | convenciones; capturas actualizadas.
@@ -35,7 +38,7 @@ CHANGELOG (versión interna del documento)
 -->
 # Manual de uso — Generador de Croquis
 
-> Corresponde a la versión **1.4.0** de la aplicación.
+> Corresponde a la versión **1.5.0** de la aplicación.
 
 ## Contenido
 
@@ -138,6 +141,7 @@ El valor debe coincidir con el que aparece en `SHA256SUMS.txt`.
 | **Identificador** | Agrupa los polígonos que forman una misma construcción. | `id`, `cod`, `codigo`, `code`, `id_construccion`, `predio`, `lote`, `ficha`, `npn`, `matricula`, `objectid`… |
 | **Pisos** | Número de pisos que se muestra en el croquis. | `pisos`, `piso`, `niveles`, `floors`, `num_pisos`, `nro_pisos`, `plantas`… |
 | **Uso** | Uso de cada unidad, que se muestra en las convenciones. | `uso`, `uso_construccion`, `uso_unidad`, `destino`, `destinacion`, `use`… |
+| **Número predial (NPN)** | Detecta las informalidades (no se elige en la interfaz). | `CODIGO_UNIDAD_CONSTRUCCION`, `CODIGO_CONSTRUCCION`, `TERRENO_CODIGO`, `npn`… o cualquier campo con códigos de 30 caracteres |
 
 Los nombres se reconocen sin distinguir mayúsculas y también como parte de un nombre más largo
 (por ejemplo `COD_CONST` o `NUM_PISOS`). Si no se detectan, se eligen a mano en la lista.
@@ -169,8 +173,8 @@ inferior indica siempre qué hacer a continuación.
      | **Piso de la unidad** | `PLANTA_UBICACION`, `nivel`, `piso` | Cada unidad con el color de su piso (piso 1 azul, piso 2 verde…), leyenda de convenciones **aunque el croquis tenga una sola unidad** y título «Piso 2» o «Pisos 1, 2». |
      | **Total de pisos** | `NUMERO_PISOS`, `pisos`, `niveles` | El total se muestra en el título («3 pisos»); los colores siguen el orden de las unidades. |
 
-     En capas LADM-COL de unidades de construcción, use `PLANTA_UBICACION` con **Piso de la
-     unidad**. Para ver juntas todas las unidades de una construcción, agrupe por un código
+     En capas LADM-COL de unidades de construcción, el programa propone `PLANTA_UBICACION`
+     con **Piso de la unidad** (no `ALTURA`, que es la altura en metros). Para ver juntas todas las unidades de una construcción, agrupe por un código
      que compartan (p. ej. `CODIGO_UNIDAD_CONSTRUCCION`); si agrupa por `IDENTIFICADOR`, cada
      unidad sale en su propio croquis, con su piso y su leyenda.
    - *Uso*: opcional; con `(ninguno)` las convenciones no muestran usos. Si se elige, cada
@@ -184,6 +188,25 @@ inferior indica siempre qué hacer a continuación.
      pisos». En un Shapefile no hay dominios, así que se muestra el valor tal como está
      (conviene que el campo ya tenga el texto del uso). Los usos largos se parten en
      varias líneas.
+   - *Informalidades*: si el número predial (NPN) de algún polígono tiene un **2 en la
+     posición 22** (condición de propiedad), es un **predio informal**, normalmente
+     construido sobre un predio formal. El programa lo detecta al abrir la capa, lo indica en
+     el *Resumen de la capa* (por ejemplo, «2 polígonos (predio P001)») y activa la casilla
+     **Generar croquis adicional de informalidades**, marcada por defecto:
+
+     ![Opción de informalidades](img/opcion_informalidades.png)
+
+     - **Marcada:** cada informalidad tiene su propio croquis en la misma lámina, después de
+       los formales, con el título **INFORMALIDAD P001** (el número que el NPN tiene en el
+       lugar del terreno), sus cotas y convenciones. La construcción formal cercana se dibuja
+       en **gris y sin cotas**, para ubicar la informalidad.
+     - **Desmarcada:** solo se dibujan los croquis formales.
+
+     En ambos casos los croquis formales **nunca incluyen** las informalidades, aunque
+     compartan identificador (en LADM-COL ambas suelen tener `IDENTIFICADOR = 1`). Si la
+     capa no tiene informalidades, la casilla queda desactivada.
+
+     ![Ejemplo con informalidad](img/ejemplo_informalidad.png)
    - *Acotado*: con **Acotar solo vértices principales** activado (recomendado), los vértices
      de ajuste que se apartan menos que la **tolerancia** (0,15 m por defecto) de la recta
      entre esquinas no se acotan: el lado se mide de esquina a esquina, sumando sus tramos.
@@ -265,6 +288,8 @@ navegador.
 
 | Elemento | Significado |
 |---|---|
+| Título **INFORMALIDAD P001** (naranja) | Croquis adicional de una informalidad: el número es el de su predio en el NPN. |
+| Zona gris sin cotas | Construcción formal cercana a la informalidad, como referencia. Aparece en las convenciones como «Formal de referencia». |
 | Título `Construcción: X  \|  3 pisos  \|  M partes` | Identificador, pisos («3 pisos» si el campo es el total; «Piso 2» o «Pisos 1, 2» si es el piso de cada unidad) y número de polígonos que la forman. |
 | Etiqueta naranja con línea guía | Identificador y pisos. Se coloca **fuera** de la construcción, en un hueco libre de cotas, y la línea termina en un punto (•) dentro de la construcción. Si no hay espacio afuera, queda adentro. Los códigos largos se parten en varias líneas; el código completo está en el título. Puede moverla en la vista previa. |
 | Cotas (`10.00 m`) | Longitud de cada lado del contorno exterior entre vértices principales, en metros, con dos decimales. Si el lado tiene vértices de ajuste, es la **suma de sus tramos**. |

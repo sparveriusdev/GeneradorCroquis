@@ -3,6 +3,12 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v1.7.0 | 2026-11-20 | Informalidades (posición 22 del NPN = 2):
+#          |            | CapaCargada.campo_npn, predios_informales, claves()
+#          |            | y conteo con o sin informalidades; Construccion
+#          |            | .predio_informal y .referencia (construcción
+#          |            | formal en gris); SeleccionCampos.incluir_informales;
+#          |            | ResumenCapa muestra las informalidades.
 #   v1.6.0 | 2026-11-06 | Uso de cada unidad: SeleccionCampos.campo_uso,
 #          |            | Construccion.usos_partes, GrupoPiso.usos;
 #          |            | CapaCargada guarda los dominios codificados y
@@ -40,11 +46,13 @@ from enum import StrEnum
 from functools import cached_property
 from typing import TYPE_CHECKING
 
+import pandas as pd
 from shapely.geometry import MultiPolygon, Polygon
 from shapely.ops import unary_union
 
-from generador_croquis.config import TOLERANCIA_MAXIMA, TOLERANCIA_PRINCIPALES
+from generador_croquis.config import ID_VACIO, TOLERANCIA_MAXIMA, TOLERANCIA_PRINCIPALES
 from generador_croquis.domain.exceptions import OpcionInvalidaError
+from generador_croquis.domain.npn import predio_informal
 from generador_croquis.domain.version import Version
 
 if TYPE_CHECKING:
@@ -132,6 +140,14 @@ class Construccion:
     significado_pisos: SignificadoPisos = SignificadoPisos.TOTAL
     # Uso de cada parte (mismo orden que ``partes``), ya en texto legible; vacío si no hay.
     usos_partes: tuple[str | None, ...] = ()
+    # Informalidad: número de su predio (p. ej. «P001»); None = construcción formal.
+    predio_informal: str | None = None
+    # Construcción formal cercana, dibujada en gris como referencia (sin cotas).
+    referencia: tuple[Polygon | MultiPolygon, ...] = ()
+
+    @property
+    def es_informal(self) -> bool:
+        return self.predio_informal is not None
 
     @property
     def con_uso(self) -> bool:
@@ -202,6 +218,11 @@ class Construccion:
     def union(self) -> BaseGeometry:
         return unary_union(list(self.partes))
 
+    @cached_property
+    def extension(self) -> BaseGeometry:
+        """Todo lo que se dibuja: la construcción y su referencia."""
+        return unary_union([*self.partes, *self.referencia])
+
     @property
     def descripcion_pisos(self) -> str | None:
         """«3 pisos» (total) o «Piso 2» / «Pisos 1, 2» (ubicación de las unidades)."""
@@ -244,6 +265,8 @@ class SeleccionCampos:
     campo_pisos: str | None = None
     significado_pisos: SignificadoPisos = SignificadoPisos.TOTAL
     campo_uso: str | None = None
+    # Croquis adicional para cada informalidad (si no, las informalidades no se dibujan).
+    incluir_informales: bool = False
 
 
 def codigo_texto(valor: object) -> str | None:
@@ -273,6 +296,32 @@ class CapaCargada:
     avisos: tuple[str, ...] = field(default_factory=tuple)
     # Dominios codificados de la fuente: campo → (código → descripción).
     dominios: Mapping[str, Mapping[str, str]] = field(default_factory=dict)
+    # Campo con el número predial nacional (NPN): de él salen las informalidades.
+    campo_npn: str | None = None
+
+    @cached_property
+    def predios_informales(self) -> pd.Series:
+        """Por polígono, el número del predio informal (p. ej. «P001») o None si es formal."""
+        valores = (
+            self.gdf[self.campo_npn]
+            if self.campo_npn in self.gdf.columns
+            else [None] * len(self.gdf)
+        )
+        return pd.Series([predio_informal(v) for v in valores], index=self.gdf.index, dtype=object)
+
+    @property
+    def num_informales(self) -> int:
+        return int(self.predios_informales.notna().sum())
+
+    @property
+    def nombres_predios_informales(self) -> list[str]:
+        return sorted(self.predios_informales.dropna().unique())
+
+    def claves(self, campo_id: str | None) -> pd.Series:
+        """Clave de agrupación de cada polígono: su identificador, o su posición si no hay."""
+        if campo_id and campo_id in self.gdf.columns:
+            return self.gdf[campo_id].astype("string").fillna(ID_VACIO)
+        return pd.Series([str(i) for i in range(len(self.gdf))], index=self.gdf.index)
 
     def texto_valor(self, campo: str, valor: object) -> str | None:
         """Texto legible de un valor: la descripción del dominio si existe, si no el valor."""
@@ -290,10 +339,14 @@ class CapaCargada:
     def num_poligonos(self) -> int:
         return len(self.gdf)
 
-    def contar_construcciones(self, campo_id: str | None) -> int:
-        if campo_id and campo_id in self.gdf.columns:
-            return int(self.gdf[campo_id].nunique(dropna=False))
-        return self.num_poligonos
+    def contar_construcciones(self, campo_id: str | None, informales: bool = True) -> int:
+        """Croquis que se dibujarán: formales y, si se piden, informales (por separado)."""
+        tabla = pd.DataFrame(
+            {"predio": self.predios_informales.fillna(""), "clave": self.claves(campo_id)}
+        )
+        if not informales:
+            tabla = tabla[tabla["predio"] == ""]
+        return len(tabla.drop_duplicates())
 
 
 @dataclass(frozen=True)
@@ -321,19 +374,28 @@ class ResumenCapa:
         """
         capa = self.capa
         campo = self.campo_id_sugerido if usar_sugerido else campo_id
+        formales = capa.contar_construcciones(campo, informales=False)
         if campo:
-            construcciones = f"{capa.contar_construcciones(campo)} (agrupadas por «{campo}»)"
+            construcciones = f"{formales} (agrupadas por «{campo}»)"
         else:
-            construcciones = f"{capa.num_poligonos} (un croquis por polígono)"
+            construcciones = f"{formales} (un croquis por polígono)"
         crs = capa.gdf.crs
         campos = capa.campos
         columnas = ", ".join(campos[: self.COLUMNAS_VISIBLES])
         if len(campos) > self.COLUMNAS_VISIBLES:
             columnas += f" y {len(campos) - self.COLUMNAS_VISIBLES} más"
-        return [
+        filas = [
             ("Archivo", capa.nombre),
             ("Polígonos", str(capa.num_poligonos)),
             ("Construcciones", construcciones),
+        ]
+        if capa.num_informales:
+            nombres = capa.nombres_predios_informales
+            predios = f"predio{'s' if len(nombres) > 1 else ''} {', '.join(nombres)}"
+            poligonos = "polígono" if capa.num_informales == 1 else "polígonos"
+            filas.append(("Informalidades", f"{capa.num_informales} {poligonos} ({predios})"))
+        return [
+            *filas,
             ("Sistema de coordenadas", crs.to_string() if crs is not None else "Sin definir"),
             (f"Columnas ({len(campos)})", columnas or "—"),
         ]

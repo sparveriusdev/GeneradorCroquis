@@ -4,6 +4,7 @@ Archivo  : README.md
 Proyecto : Generador de Croquis
 ------------------------------------------------------------------------------
 CHANGELOG (versión interna del documento)
+  v2.5.0 | 2026-11-20 | 1.5.0: croquis adicional de informalidades.
   v2.4.0 | 2026-11-06 | 1.4.0: campo de uso en las convenciones, con la
          |            | descripción del dominio de la GDB.
   v2.3.0 | 2026-11-06 | 1.3.0: etiqueta del identificador fuera de la
@@ -76,6 +77,7 @@ con la medida de cada lado, el área, el perímetro y el número de pisos.
 | 📏 **Acotado inteligente** | Solo se acotan los **vértices principales**: los de ajuste se agrupan y el lado mide la suma de sus tramos (tolerancia ajustable). |
 | 🎨 **Un piso, un color** | Cada piso tiene siempre su color, y sus cotas también; un lado común se acota una vez, con el color del piso más alto. |
 | 🏠 **Uso en las convenciones** | Elija el campo de uso (p. ej. `USO`) y cada piso muestra el uso de sus unidades. En una GDB se lee el dominio: `11` → «(Residencial) Vivienda hasta 3 pisos». |
+| 🏚️ **Informalidades** | Detecta los predios informales por el NPN (un `2` en la posición 22) y, si lo pide, les dibuja un croquis aparte, con la construcción formal en gris como referencia. Nunca se mezclan con los croquis formales. |
 | 🗂️ **Convenciones por piso** | Leyenda con el color, el estilo de línea y el área de cada piso. Vista desde arriba: cada zona con el color del piso más alto, y contornos punteados para los pisos superiores. |
 | 🧲 **Cotas sin solapes** | Cada etiqueta busca un hueco libre y, si se aleja, se une a su lado con una línea guía. |
 | 🏷️ **Etiqueta afuera y movible** | El identificador va fuera de la construcción, unido a ella con una línea guía, sin tapar cotas. En la vista previa se puede arrastrar, y la imagen exportada conserva la posición. |

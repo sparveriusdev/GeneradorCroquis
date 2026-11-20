@@ -3,6 +3,9 @@
 # Proyecto : Generador de Croquis
 # ------------------------------------------------------------------------------
 # CHANGELOG (versión interna del documento)
+#   v2.4.0 | 2026-11-20 | Sección «Informalidades»: casilla «Generar croquis
+#          |            | adicional de informalidades», activa (y marcada)
+#          |            | solo si la capa las tiene (posición 22 del NPN = 2).
 #   v2.3.0 | 2026-11-06 | Selector «Uso» (opcional): el uso de cada unidad
 #          |            | aparece en las convenciones.
 #   v2.2.0 | 2026-11-05 | Opción «El campo indica: piso de la unidad / total
@@ -65,6 +68,9 @@ if TYPE_CHECKING:
     from generador_croquis.controller.controlador import ControladorCroquis
 
 SIN_ARCHIVO = "Ningún archivo seleccionado"
+SIN_INFORMALIDADES = (
+    "Se detectan por el número predial (NPN): un 2 en la posición 22 indica un predio informal."
+)
 
 
 def aplicar_icono(ventana: tk.Tk | tk.Toplevel) -> list[ImageTk.PhotoImage]:
@@ -105,6 +111,8 @@ class VentanaPrincipal:
         self.campo_uso = tk.StringVar()
         self.significado_pisos = tk.StringVar(value=SignificadoPisos.TOTAL.value)
         self.solo_principales = tk.BooleanVar(value=True)
+        self.incluir_informales = tk.BooleanVar(value=False)
+        self.detalle_informales = tk.StringVar(value=SIN_INFORMALIDADES)
         self.tolerancia = tk.StringVar(value=f"{TOLERANCIA_PRINCIPALES:.2f}")
         self.estado = tk.StringVar()
         self._construir()
@@ -228,7 +236,8 @@ class VentanaPrincipal:
             self.campo_uso,
         )
         self.selector_uso.grid(row=3, column=0, sticky="ew", pady=(12, 0))
-        self._seccion_acotado(campos.cuerpo).grid(row=4, column=0, sticky="ew", pady=(12, 0))
+        self._seccion_informalidades(campos.cuerpo).grid(row=4, column=0, sticky="ew", pady=(12, 0))
+        self._seccion_acotado(campos.cuerpo).grid(row=5, column=0, sticky="ew", pady=(12, 0))
 
         # Resumen
         resumen = Tarjeta(pagina, "Resumen de la capa")
@@ -288,6 +297,32 @@ class VentanaPrincipal:
     def _al_cambiar_campo_pisos(self, _evento: tk.Event | None = None) -> None:
         if self._controlador:
             self._controlador.cambiar_campo_pisos(self.campo_pisos.get())
+
+    def _seccion_informalidades(self, parent: ttk.Frame) -> ttk.Frame:
+        marco = ttk.Frame(parent, style="CardInner.TFrame")
+        marco.columnconfigure(0, weight=1)
+        ttk.Frame(marco, style="Divider.TFrame", height=1).grid(
+            row=0, column=0, sticky="ew", pady=(0, 10)
+        )
+        ttk.Label(marco, text="Informalidades", style="Key.TLabel").grid(
+            row=1, column=0, sticky="w"
+        )
+        self.casilla_informales = ttk.Checkbutton(
+            marco,
+            text="Generar croquis adicional de informalidades",
+            variable=self.incluir_informales,
+            style="Card.TCheckbutton",
+        )
+        self.casilla_informales.grid(row=2, column=0, sticky="w", pady=(6, 0))
+        self.casilla_informales.state(["disabled"])
+        ttk.Label(
+            marco,
+            textvariable=self.detalle_informales,
+            style="Helper.TLabel",
+            wraplength=520,
+            justify="left",
+        ).grid(row=3, column=0, sticky="w", pady=(6, 0))
+        return marco
 
     def _seccion_acotado(self, parent: ttk.Frame) -> ttk.Frame:
         marco = ttk.Frame(parent, style="CardInner.TFrame")
@@ -372,6 +407,7 @@ class VentanaPrincipal:
                 self.tolerancia.get(),
                 self.significado_pisos.get(),
                 self.campo_uso.get(),
+                self.incluir_informales.get(),
             )
 
     def _guardar(self) -> None:
@@ -439,6 +475,16 @@ class VentanaPrincipal:
         self.significado_pisos.set(significado.value)
         for opcion in self._opciones_significado:
             opcion.state(["!disabled"] if habilitado else ["disabled"])
+
+    def mostrar_informalidades(self, cantidad: int, detalle: str) -> None:
+        self.incluir_informales.set(cantidad > 0)
+        self.casilla_informales.state(["!disabled"] if cantidad else ["disabled"])
+        self.detalle_informales.set(
+            f"{detalle} Se dibujan aparte, con la construcción formal cercana en gris; "
+            "los croquis formales nunca las incluyen."
+            if cantidad
+            else f"{SIN_INFORMALIDADES} {detalle}".strip()
+        )
 
     def habilitar_generar(self, habilitado: bool) -> None:
         self.btn_generar["state"] = "normal" if habilitado else "disabled"
